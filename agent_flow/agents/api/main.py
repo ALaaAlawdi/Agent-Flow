@@ -47,6 +47,7 @@ class AddAgentRequest(BaseModel):
     role: str
     tools: list[str]
     system_prompt: Optional[str] = ""
+    model: Optional[str] = None  # e.g., "gpt-4o", "gpt-4o-mini" (defaults to gpt-4o-mini)
 
 
 class SetGoalRequest(BaseModel):
@@ -180,13 +181,15 @@ async def add_agent(team_name: str, request: AddAgentRequest):
         request.role,
         request.tools,
         request.system_prompt or "",
+        model=request.model,
     )
-    
+
     return {
         "status": "added",
         "team": team_name,
         "agent_id": request.agent_id,
         "role": request.role,
+        "model": request.model or "gpt-4o-mini (default)",
     }
 
 
@@ -1364,6 +1367,31 @@ async def list_all_teams():
     
     first_team = next(iter(teams.values()))
     return {"teams": first_team.persistence.list_teams()}
+
+
+# ============== MODELS ROUTES ==============
+
+@app.get("/models", response_model=dict)
+async def list_models():
+    """List all available AI models (OpenAI is default)."""
+    from agent_flow.agents.factory import DynamicAgentFactory
+    
+    return {
+        "models": DynamicAgentFactory.list_available_models(),
+        "default": DynamicAgentFactory.DEFAULT_MODEL,
+        "providers": ["openai", "anthropic", "google", "meta"],
+    }
+
+
+@app.get("/models/default", response_model=dict)
+async def get_default_model():
+    """Get the default model."""
+    from agent_flow.agents.factory import DynamicAgentFactory
+    
+    return {
+        "default_model": DynamicAgentFactory.DEFAULT_MODEL,
+        "note": "All agents use OpenAI models by default",
+    }
 
 
 # ============== STATUS ROUTES ==============

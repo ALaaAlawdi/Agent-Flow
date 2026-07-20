@@ -353,6 +353,7 @@ class AgentTeam:
         role: str,
         tools: list[str],
         system_prompt: str = "",
+        model: Optional[str] = None,
     ) -> TeamAgent:
         """Add an agent to the team.
         
@@ -361,6 +362,9 @@ class AgentTeam:
             role: Agent role (researcher, coder, coordinator, etc.)
             tools: List of toolsets
             system_prompt: Custom system prompt
+            model: Model to use (default: OpenAI gpt-4o-mini)
+                   Examples: "gpt-4o", "gpt-4o-mini", "o1-preview"
+                   Or full: "openai/gpt-4o", "anthropic/claude-sonnet-4"
             
         Returns:
             TeamAgent instance
@@ -371,6 +375,7 @@ class AgentTeam:
             role=role,
             tools=tools,
             system_prompt=system_prompt,
+            model=model,
         )
         
         # Create team agent
@@ -407,8 +412,13 @@ class AgentTeam:
             InteractionType.AGENT_CREATED,
             source="user",
             target=agent_id,
-            data={"role": role, "tools": tools, "system_prompt": system_prompt[:100]},
-            summary=f"Agent '{agent_id}' joined as {role}",
+            data={
+                "role": role,
+                "tools": tools,
+                "model": model or "default",
+                "system_prompt": system_prompt[:100],
+            },
+            summary=f"Agent '{agent_id}' joined as {role} (model: {model or 'default'})",
         )
         
         # Broadcast to other agents

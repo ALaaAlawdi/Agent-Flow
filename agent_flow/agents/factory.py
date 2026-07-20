@@ -31,15 +31,40 @@ class DynamicAgentFactory:
     """Factory that creates Hermes AIAgent instances from user configuration.
     
     All agent creation is powered by Hermes package - no custom agent logic.
+    
+    Default model: OpenAI (gpt-4o-mini)
+    Supported: Any model in MODEL_REGISTRY below
     """
     
-    def __init__(self, network_name: str = "default"):
+    # Available models - OpenAI is the default
+    MODEL_REGISTRY = {
+        # OpenAI models (default)
+        "gpt-4o": "openai/gpt-4o",
+        "gpt-4o-mini": "openai/gpt-4o-mini",
+        "gpt-4-turbo": "openai/gpt-4-turbo",
+        "gpt-3.5-turbo": "openai/gpt-3.5-turbo",
+        "o1-preview": "openai/o1-preview",
+        "o1-mini": "openai/o1-mini",
+        # Anthropic models (still available)
+        "claude-sonnet-4": "anthropic/claude-sonnet-4",
+        "claude-opus-4": "anthropic/claude-opus-4",
+        "claude-haiku": "anthropic/claude-haiku",
+        # Other providers
+        "gemini-pro": "google/gemini-pro",
+        "llama-3": "meta/llama-3",
+    }
+    
+    DEFAULT_MODEL = "gpt-4o-mini"  # OpenAI default
+    
+    def __init__(self, network_name: str = "default", default_model: Optional[str] = None):
         """Initialize factory with network name.
         
         Args:
             network_name: Name of the agent network (for storage)
+            default_model: Default model for agents (defaults to gpt-4o-mini)
         """
         self.network_name = network_name
+        self.default_model = default_model or self.DEFAULT_MODEL
         # get_profile_dir requires 'name' argument
         self.profile_dir = get_profile_dir(network_name) / "networks" / network_name
         self.profile_dir.mkdir(parents=True, exist_ok=True)
@@ -54,7 +79,7 @@ class DynamicAgentFactory:
         role: str,
         tools: list[str],
         system_prompt: Optional[str] = None,
-        model: str = "claude-sonnet-4",
+        model: Optional[str] = None,
         max_iterations: int = 50,
         collaborates_with: Optional[list[str]] = None,
     ) -> AIAgent:
@@ -65,7 +90,8 @@ class DynamicAgentFactory:
             role: Agent role (researcher, coder, etc.)
             tools: List of enabled toolsets (validated via Hermes)
             system_prompt: Custom system instructions
-            model: Model to use (default: claude-sonnet-4)
+            model: Model to use (default: OpenAI gpt-4o-mini)
+                   Can be short name like "gpt-4o" or full "openai/gpt-4o"
             max_iterations: Max iterations (default: 50)
             collaborates_with: List of roles to collaborate with
             
@@ -75,6 +101,9 @@ class DynamicAgentFactory:
         Raises:
             ValueError: If tools are invalid
         """
+        # Resolve model name
+        resolved_model = self._resolve_model(model or self.default_model)
+        
         # 1. Validate tools using Hermes built-in validation
         warnings = validate_platform_toolsets(tools, _default_toolset_validator)
         # Log warnings if any
@@ -98,7 +127,7 @@ class DynamicAgentFactory:
             enabled_toolsets=tools,
             ephemeral_system_prompt=prompt,
             max_iterations=max_iterations,
-            model=model,
+            model=resolved_model,
             
             # Callbacks for tracking
             tool_progress_callback=self._on_tool_progress,
@@ -111,13 +140,45 @@ class DynamicAgentFactory:
             "role": role,
             "tools": tools,
             "system_prompt": system_prompt,
-            "model": model,
+            "model": resolved_model,
             "max_iterations": max_iterations,
             "collaborates_with": collaborates_with or [],
         }
         self._save_config(name, config)
         
         return agent
+    
+    def _resolve_model(self, model: str) -> str:
+        """Resolve short model name to full provider/name format.
+        
+        Args:
+            model: Short name (e.g., "gpt-4o") or full name ("openai/gpt-4o")
+            
+        Returns:
+            Full model name with provider prefix
+        """
+        # If already has provider prefix, use as-is
+        if "/" in model:
+            return model
+        
+        # Look up in registry
+        if model in self.MODEL_REGISTRY:
+            return self.MODEL_REGISTRY[model]
+        
+        # Default: assume OpenAI
+        return f"openai/{model}"
+    
+    @classmethod
+    def list_available_models(cls) -> list[dict]:
+        """List all available models."""
+        return [
+            {
+                "short_name": short,
+                "full_name": full,
+                "provider": full.split("/")[0] if "/" in full else "unknown",
+            }
+            for short, full in cls.MODEL_REGISTRY.items()
+        ]
     
     def _build_prompt(
         self,
