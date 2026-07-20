@@ -1,27 +1,23 @@
-"""FastAPI endpoints for Dynamic Agent System."""
+"""Combined FastAPI app for Agent Team System."""
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Optional
 from pydantic import BaseModel
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-# Agent system imports
-from agent_flow.agents import (
-    DynamicAgentFactory,
-    DynamicAgentRegistry,
-    AgentCommunication,
-    DynamicWorkflow,
-)
+from agent_flow.agents import AgentTeam
+from hermes_cli.toolset_validation import validate_platform_toolsets
 
 
 # Initialize app
 app = FastAPI(
-    title="Agent-Flow Dynamic Agent API",
-    description="Create and manage dynamic AI agents powered by Hermes",
-    version="0.1.0",
+    title="Agent-Flow Team API",
+    description="Collaborative multi-agent teams powered by Hermes - كل وكيل يعرف الآخر ويتواصل معه تلقائياً",
+    version="0.2.0",
 )
 
 # CORS
@@ -33,271 +29,288 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize components
-factory = DynamicAgentFactory("default")
-registry = DynamicAgentRegistry()
-communication = AgentCommunication("default")
-workflow = DynamicWorkflow(registry, communication)
+# Teams storage
+teams: dict[str, AgentTeam] = {}
 
 
 # ============== MODELS ==============
 
-class AgentConfig(BaseModel):
-    """Configuration for creating a new agent."""
+class CreateTeamRequest(BaseModel):
+    """Request to create a team."""
     name: str
+    goal: Optional[str] = ""
+
+
+class AddAgentRequest(BaseModel):
+    """Request to add an agent."""
+    agent_id: str
     role: str
     tools: list[str]
-    system_prompt: Optional[str] = None
-    model: str = "claude-sonnet-4"
-    max_iterations: int = 50
-    collaborates_with: Optional[list[str]] = None
+    system_prompt: Optional[str] = ""
 
 
-class AgentUpdate(BaseModel):
-    """Configuration for updating an agent."""
-    system_prompt: Optional[str] = None
-    model: Optional[str] = None
-    max_iterations: Optional[int] = None
-    collaborates_with: Optional[list[str]] = None
+class SetGoalRequest(BaseModel):
+    """Request to set goal."""
+    goal: str
 
 
-class TaskRequest(BaseModel):
+class AddKnowledgeRequest(BaseModel):
+    """Request to add knowledge."""
+    key: str
+    value: str
+
+
+class RunTaskRequest(BaseModel):
     """Request to run a task."""
     task: str
     agent_ids: Optional[list[str]] = None
-    mode: str = "team"  # team, sequential, parallel
-    required_roles: Optional[list[str]] = None
+    mode: str = "collaborative"  # collaborative, sequential
 
 
-class MessageRequest(BaseModel):
-    """Request to send a message."""
+class SendMessageRequest(BaseModel):
+    """Request to send message."""
+    from_agent: str
     to_agent: str
     content: str
-    urgency: str = "normal"
+
+
+class BroadcastRequest(BaseModel):
+    """Request to broadcast."""
+    from_agent: str
+    content: str
+    to_roles: Optional[list[str]] = None
+
+
+# ============== TEAM ROUTES ==============
+
+@app.post("/teams", response_model=dict)
+async def create_team(request: CreateTeamRequest):
+    """Create a new agent team.
+    
+    All agents in the team share:
+    - Environment (knowledge, memory, state)
+    - Communication channels
+    - Goals
+    - Learning system
+    """
+    if request.name in teams:
+        raise HTTPException(status_code=400, detail="Team already exists")
+    
+    team = AgentTeam(request.name, request.goal or "")
+    teams[request.name] = team
+    
+    return {
+        "status": "created",
+        "team": request.name,
+        "goal": request.goal or "",
+    }
+
+
+@app.get("/teams", response_model=dict)
+async def list_teams():
+    """List all teams."""
+    return {
+        "teams": [
+            {
+                "name": name,
+                "goal": team.goal,
+                "agents_count": len(team.agents),
+            }
+            for name, team in teams.items()
+        ],
+        "count": len(teams),
+    }
+
+
+@app.get("/teams/{team_name}", response_model=dict)
+async def get_team(team_name: str):
+    """Get team details."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_team_status()
+
+
+@app.delete("/teams/{team_name}", response_model=dict)
+async def delete_team(team_name: str):
+    """Delete a team."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    del teams[team_name]
+    return {"status": "deleted", "team": team_name}
 
 
 # ============== AGENT ROUTES ==============
 
-@app.post("/agents", response_model=dict)
-async def create_agent(config: AgentConfig):
-    """Create a new dynamic agent.
+@app.post("/teams/{team_name}/agents", response_model=dict)
+async def add_agent(team_name: str, request: AddAgentRequest):
+    """Add an agent to team.
     
-    The agent is created using Hermes AIAgent with the provided configuration.
+    The agent will:
+    - Know about other team members
+    - Have access to shared knowledge
+    - Be able to communicate with other agents
+    - Learn from feedback
     """
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Validate tools via Hermes
     try:
-        # Validate tools via Hermes
-        from hermes_cli.toolset_validation import validate_platform_toolsets
-        validate_platform_toolsets(config.tools)
-        
-        # Create agent via factory
-        agent = factory.create_agent(
-            name=config.name,
-            role=config.role,
-            tools=config.tools,
-            system_prompt=config.system_prompt,
-            model=config.model,
-            max_iterations=config.max_iterations,
-            collaborates_with=config.collaborates_with,
-        )
-        
-        # Register in registry
-        registry.register(
-            config.name,
-            agent,
-            config.dict(),
-        )
-        
-        return {
-            "status": "created",
-            "agent_id": config.name,
-            "role": config.role,
-            "tools": config.tools,
-        }
-    
-    except Exception as e:
+        validate_platform_toolsets(request.tools)
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.get("/agents", response_model=dict)
-async def list_agents():
-    """List all registered agents."""
-    agents = registry.list_agents()
+    
+    team = teams[team_name]
+    team.add_agent(
+        request.agent_id,
+        request.role,
+        request.tools,
+        request.system_prompt or "",
+    )
+    
     return {
-        "agents": agents,
-        "count": len(agents),
+        "status": "added",
+        "team": team_name,
+        "agent_id": request.agent_id,
+        "role": request.role,
     }
 
 
-@app.get("/agents/{agent_id}", response_model=dict)
-async def get_agent(agent_id: str):
-    """Get agent details."""
-    config = registry.get_config(agent_id)
-    if not config:
-        raise HTTPException(status_code=404, detail="Agent not found")
+@app.get("/teams/{team_name}/agents", response_model=dict)
+async def list_agents(team_name: str):
+    """List team agents."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
     
-    status = registry.get_status(agent_id)
-    msg_count = communication.get_message_count(agent_id)
+    team = teams[team_name]
+    agents = []
     
-    return {
-        "id": agent_id,
-        "config": config,
-        "status": status,
-        "pending_messages": msg_count,
-    }
+    for agent_id, agent in team.agents.items():
+        perf = team.environment.get_agent_performance(agent_id)
+        agents.append({
+            "id": agent_id,
+            "role": agent.role,
+            "tasks_completed": agent.tasks_completed,
+            "tasks_failed": agent.tasks_failed,
+            "performance": perf,
+        })
+    
+    return {"agents": agents, "count": len(agents)}
 
 
-@app.delete("/agents/{agent_id}", response_model=dict)
-async def delete_agent(agent_id: str):
-    """Delete an agent."""
-    agent = registry.get(agent_id)
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
+# ============== GOAL ROUTES ==============
+
+@app.post("/teams/{team_name}/goal", response_model=dict)
+async def set_goal(team_name: str, request: SetGoalRequest):
+    """Set team goal."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
     
-    # Unregister
-    registry.unregister(agent_id)
-    
-    # Delete from storage
-    factory.delete_agent(agent_id)
-    
-    # Clear messages
-    communication.clear_messages(agent_id)
-    
-    return {"status": "deleted", "agent_id": agent_id}
+    teams[team_name].set_goal(request.goal)
+    return {"status": "set", "goal": request.goal}
 
 
-@app.put("/agents/{agent_id}", response_model=dict)
-async def update_agent(agent_id: str, update: AgentUpdate):
-    """Update agent configuration.
+# ============== KNOWLEDGE ROUTES ==============
+
+@app.post("/teams/{team_name}/knowledge", response_model=dict)
+async def add_knowledge(team_name: str, request: AddKnowledgeRequest):
+    """Add shared knowledge to team."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
     
-    Note: Some changes may require restarting the agent.
-    """
-    config = registry.get_config(agent_id)
-    if not config:
-        raise HTTPException(status_code=404, detail="Agent not found")
+    teams[team_name].add_knowledge(request.key, request.value)
+    return {"status": "added", "key": request.key}
+
+
+@app.get("/teams/{team_name}/knowledge", response_model=dict)
+async def list_knowledge(team_name: str):
+    """List team knowledge."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
     
-    # Apply updates
-    if update.system_prompt is not None:
-        config["system_prompt"] = update.system_prompt
-    if update.model is not None:
-        config["model"] = update.model
-    if update.max_iterations is not None:
-        config["max_iterations"] = update.max_iterations
-    if update.collaborates_with is not None:
-        config["collaborates_with"] = update.collaborates_with
+    team = teams[team_name]
+    knowledge = []
     
-    # Save updated config
-    factory._save_config(agent_id, config)
+    for key in team.environment.list_knowledge():
+        value = team.environment.get_knowledge(key)
+        knowledge.append({"key": key, "value": value})
     
-    return {
-        "status": "updated",
-        "agent_id": agent_id,
-        "config": config,
-    }
+    return {"knowledge": knowledge, "count": len(knowledge)}
 
 
 # ============== TASK ROUTES ==============
 
-@app.post("/agents/{agent_id}/run", response_model=dict)
-async def run_single_agent(agent_id: str, request: TaskRequest):
-    """Run a single agent on a task."""
-    agent = registry.get(agent_id)
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
+@app.post("/teams/{team_name}/run", response_model=dict)
+async def run_task(team_name: str, request: RunTaskRequest):
+    """Run task with team.
     
-    try:
-        result = await workflow.run_single(agent_id, request.task)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/run", response_model=dict)
-async def run_task(request: TaskRequest):
-    """Run task with selected agents or auto-selected agents.
-    
-    - If agent_ids provided: run those specific agents
-    - If required_roles provided: auto-select agents with those roles
-    - Otherwise: run all online agents
+    Modes:
+    - collaborative: All agents work together
+    - sequential: Agents work one after another, passing results
     """
-    # Determine which agents to run
-    agent_ids = request.agent_ids
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
     
-    if not agent_ids:
-        # Auto-select agents
-        agent_ids = workflow.auto_select_agents(
-            task=request.task,
-            required_roles=request.required_roles,
-        )
+    team = teams[team_name]
     
-    if not agent_ids:
-        raise HTTPException(
-            status_code=400,
-            detail="No agents available. Create agents first.",
-        )
+    if request.mode == "sequential":
+        result = team.run_sequential(request.task, request.agent_ids)
+    else:
+        result = team.run_collaborative(request.task, request.agent_ids)
     
-    # Run in specified mode
-    try:
-        if request.mode == "sequential":
-            results = await workflow.run_sequential(agent_ids, request.task)
-        elif request.mode == "parallel":
-            results = await workflow.run_parallel(agent_ids, request.task)
-        else:  # team
-            results = await workflow.run_team(agent_ids, request.task)
-        
-        return {
-            "task": request.task,
-            "mode": request.mode,
-            "agents_used": agent_ids,
-            "results": results,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return result
 
 
 # ============== MESSAGE ROUTES ==============
 
-@app.post("/messages", response_model=dict)
-async def send_message(message: MessageRequest, from_agent: str = "api"):
-    """Send a message from one agent to another."""
-    # Validate sender exists (or use "api" as system sender)
-    if from_agent != "api":
-        if not registry.get(from_agent):
-            raise HTTPException(status_code=404, detail="Sender agent not found")
+@app.post("/teams/{team_name}/messages", response_model=dict)
+async def send_message(team_name: str, request: SendMessageRequest):
+    """Send message from one agent to another."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
     
-    if not registry.get(message.to_agent):
-        raise HTTPException(status_code=404, detail="Receiver agent not found")
-    
-    msg_id = communication.send_message(
-        from_agent=from_agent,
-        to_agent=message.to_agent,
-        content=message.content,
-        urgency=message.urgency,
-    )
+    team = teams[team_name]
+    team.message_agent(request.from_agent, request.to_agent, request.content)
     
     return {
         "status": "sent",
-        "message_id": msg_id,
-        "from": from_agent,
-        "to": message.to_agent,
+        "from": request.from_agent,
+        "to": request.to_agent,
     }
 
 
-@app.get("/agents/{agent_id}/messages", response_model=dict)
-async def get_messages(agent_id: str, peek: bool = False):
-    """Get pending messages for an agent."""
-    if not registry.get(agent_id):
-        raise HTTPException(status_code=404, detail="Agent not found")
+@app.post("/teams/{team_name}/broadcast", response_model=dict)
+async def broadcast(team_name: str, request: BroadcastRequest):
+    """Broadcast message to team members."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
     
-    if peek:
-        messages = communication.peek_messages(agent_id)
-    else:
-        messages = communication.get_messages(agent_id)
+    team = teams[team_name]
+    team.broadcast(request.from_agent, request.content, request.to_roles)
     
-    return {
-        "agent_id": agent_id,
-        "messages": [m.to_dict() for m in messages],
-        "count": len(messages),
-    }
+    return {"status": "broadcasted"}
+
+
+# ============== LEARNING ROUTES ==============
+
+@app.get("/teams/{team_name}/learning", response_model=dict)
+async def get_learning(team_name: str):
+    """Get team learning data."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_learning()
+
+
+@app.get("/teams/{team_name}/agents/{agent_id}/improve", response_model=dict)
+async def get_improvement(team_name: str, agent_id: str):
+    """Get improvement suggestions for agent."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].improve_agent(agent_id)
 
 
 # ============== STATUS ROUTES ==============
@@ -306,18 +319,32 @@ async def get_messages(agent_id: str, peek: bool = False):
 async def get_status():
     """Get system status."""
     return {
-        "agents": {
-            "total": len(registry.agents),
-            "online": len(registry.get_online_agents()),
-        },
-        "storage": {
-            "profile_dir": str(factory.profile_dir),
-            "saved_agents": factory.list_agents(),
-        },
+        "teams": len(teams),
+        "total_agents": sum(len(t.agents) for t in teams.values()),
     }
 
 
 @app.get("/health", response_model=dict)
 async def health_check():
-    """Health check endpoint."""
+    """Health check."""
     return {"status": "healthy"}
+
+
+# ============== DOCUMENTATION ==============
+
+@app.get("/")
+async def root():
+    """Root endpoint with API info."""
+    return {
+        "name": "Agent-Flow Team API",
+        "version": "0.2.0",
+        "description": "Collaborative multi-agent teams powered by Hermes",
+        "docs": "/docs",
+        "features": [
+            "Dynamic agent creation - no hardcoded agents",
+            "Shared environment - agents work in same workspace",
+            "Inter-agent communication - agents can message each other",
+            "Goal-oriented execution - team works towards common goal",
+            "Learning system - agents improve over time",
+        ],
+    }

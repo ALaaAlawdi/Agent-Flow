@@ -4,10 +4,15 @@ from .factory import DynamicAgentFactory
 from .registry import DynamicAgentRegistry
 from .communication import AgentCommunication
 from .workflow import DynamicWorkflow
+from .environment import SharedEnvironment
+from .team import AgentTeam, TeamAgent
 
 __all__ = [
     "DynamicAgentFactory",
-    "DynamicAgentRegistry", 
+    "DynamicAgentRegistry",
     "AgentCommunication",
     "DynamicWorkflow",
+    "SharedEnvironment",
+    "AgentTeam",
+    "TeamAgent",
 ]
