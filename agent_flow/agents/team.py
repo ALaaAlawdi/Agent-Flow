@@ -16,6 +16,7 @@ from .registry import DynamicAgentRegistry
 from .factory import DynamicAgentFactory
 from .events import EventStore, EventType
 from .queue import TaskQueue, TaskPriority, TaskStatus
+from .workflow_engine import WorkflowEngine
 
 
 class TeamAgent:
@@ -205,6 +206,9 @@ class AgentTeam:
         
         # Task queue
         self.queue = TaskQueue(name)
+        
+        # Workflow engine
+        self.workflow_engine = WorkflowEngine(self)
         
         # Team agents
         self.agents: dict[str, TeamAgent] = {}

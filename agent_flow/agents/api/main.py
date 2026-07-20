@@ -416,6 +416,129 @@ async def get_agent_history(team_name: str, agent_id: str, limit: int = 50):
     return {"history": teams[team_name].get_agent_history(agent_id, limit)}
 
 
+# ============== WORKFLOW ROUTES ==============
+
+class CreateWorkflowRequest(BaseModel):
+    """Request to create a workflow."""
+    name: str
+    description: Optional[str] = ""
+
+
+class AddWorkflowStepRequest(BaseModel):
+    """Request to add a workflow step."""
+    name: str
+    agent_id: str
+    task: str
+    depends_on: Optional[list[str]] = None
+
+
+# Workflow storage
+workflows: dict[str, Any] = {}
+
+
+@app.post("/teams/{team_name}/workflows", response_model=dict)
+async def create_workflow(team_name: str, request: CreateWorkflowRequest):
+    """Create a new workflow."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    from agent_flow.agents import WorkflowEngine
+    team = teams[team_name]
+    
+    if not hasattr(team, 'workflow_engine'):
+        team.workflow_engine = WorkflowEngine(team)
+    
+    workflow = team.workflow_engine.create_workflow(request.name, request.description)
+    
+    return {
+        "status": "created",
+        "workflow_id": workflow.id,
+        "name": workflow.name,
+    }
+
+
+@app.post("/teams/{team_name}/workflows/{workflow_id}/steps", response_model=dict)
+async def add_workflow_step(team_name: str, workflow_id: str, request: AddWorkflowStepRequest):
+    """Add a step to a workflow."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    team = teams[team_name]
+    if not hasattr(team, 'workflow_engine'):
+        raise HTTPException(status_code=404, detail="Workflow engine not initialized")
+    
+    workflow = team.workflow_engine.get_workflow(workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    step = workflow.add_step(
+        name=request.name,
+        agent_id=request.agent_id,
+        task=request.task,
+        depends_on=request.depends_on,
+    )
+    
+    return {
+        "status": "added",
+        "step_id": step.id,
+        "name": step.name,
+    }
+
+
+@app.get("/teams/{team_name}/workflows", response_model=dict)
+async def list_workflows(team_name: str, status: Optional[str] = None):
+    """List workflows."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    team = teams[team_name]
+    if not hasattr(team, 'workflow_engine'):
+        return {"workflows": [], "count": 0}
+    
+    from agent_flow.agents import WorkflowStatus
+    status_filter = WorkflowStatus(status) if status else None
+    workflow_list = team.workflow_engine.list_workflows(status_filter)
+    
+    return {
+        "workflows": [w.to_dict() for w in workflow_list],
+        "count": len(workflow_list),
+    }
+
+
+@app.post("/teams/{team_name}/workflows/{workflow_id}/run", response_model=dict)
+async def run_workflow(team_name: str, workflow_id: str, parallel: bool = False):
+    """Run a workflow."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    team = teams[team_name]
+    if not hasattr(team, 'workflow_engine'):
+        raise HTTPException(status_code=404, detail="Workflow engine not initialized")
+    
+    import asyncio
+    result = await team.workflow_engine.run_workflow(workflow_id, parallel)
+    return result
+
+
+# ============== TEMPLATE ROUTES ==============
+
+@app.get("/templates", response_model=dict)
+async def list_templates():
+    """List available agent templates."""
+    from agent_flow.agents import list_templates as get_templates
+    return {"templates": get_templates(), "count": len(get_templates())}
+
+
+@app.get("/templates/{template_id}", response_model=dict)
+async def get_template(template_id: str):
+    """Get a template by ID."""
+    from agent_flow.agents import get_template as get_tmpl
+    template = get_tmpl(template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+
 # ============== STATUS ROUTES ==============
 
 @app.get("/status", response_model=dict)

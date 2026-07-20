@@ -9,10 +9,8 @@ from typing import Any, Optional
 from enum import Enum
 
 from hermes_cli.profiles import get_profile_dir
-
-
 class EventType(str, Enum):
-    """Types of events in the system."""
+    """Types of events tracked."""
     # Team events
     TEAM_CREATED = "team_created"
     TEAM_GOAL_SET = "team_goal_set"
@@ -22,6 +20,8 @@ class EventType(str, Enum):
     AGENT_STARTED = "agent_started"
     AGENT_COMPLETED = "agent_completed"
     AGENT_FAILED = "agent_failed"
+    
+    # Communication events
     AGENT_MESSAGE_SENT = "agent_message_sent"
     AGENT_MESSAGE_RECEIVED = "agent_message_received"
     
@@ -37,6 +37,13 @@ class EventType(str, Enum):
     # Learning events
     FEEDBACK_ADDED = "feedback_added"
     IMPROVEMENT_SUGGESTED = "improvement_suggested"
+    
+    # Workflow events
+    WORKFLOW_STARTED = "workflow_started"
+    WORKFLOW_COMPLETED = "workflow_completed"
+    WORKFLOW_STEP_STARTED = "workflow_step_started"
+    WORKFLOW_STEP_COMPLETED = "workflow_step_completed"
+    WORKFLOW_STEP_FAILED = "workflow_step_failed"
 
 
 class Event:
