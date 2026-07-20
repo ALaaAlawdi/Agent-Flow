@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "hermes-agent", git = "https://github.com/NousResearch/hermes-agent.git?rev=main" }]
+requires-dist = [{ name = "hermes-agent", specifier = ">=0.18.2" }]
 
 [[package]]
 name = "annotated-doc"
@@ -291,7 +291,7 @@ wheels = [
 [[package]]
 name = "hermes-agent"
 version = "0.18.2"
-source = { git = "https://github.com/NousResearch/hermes-agent.git?rev=main#26480e6c57c3558442a73c2dffe313996b19417f" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
     { name = "concurrent-log-handler", marker = "sys_platform == 'win32'" },
@@ -323,6 +323,10 @@ dependencies = [
     { name = "urllib3" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "websockets" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5c/44/c2e588a0d49049aa3fa6833d52bd6e803dc62ac7369a7ecb483b9a7b9a3d/hermes_agent-0.18.2.tar.gz", hash = "sha256:1cc7ccb6bca6e6d2aef448bbf9b79d4bc31247288a8bf549231fc148a343c678", size = 13618103, upload-time = "2026-07-08T03:12:49.202Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/4c/91652c61450763bfe165c65b83026503de0ac9ddad2c11ee522490bf4c2d/hermes_agent-0.18.2-py3-none-any.whl", hash = "sha256:8f02155cfc84b28bd98551cd18dffec0efa9ec070dd08f90f1a850f1c779492f", size = 9569078, upload-time = "2026-07-08T03:12:46.369Z" },
 ]
 
 [[package]]
