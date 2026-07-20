@@ -20,6 +20,9 @@ from .workflow_engine import WorkflowEngine
 from .hub import SmartAgentHub
 from .memory import TeamMemory
 from .learning import TeamLearning
+from .planning import PlanningEngine
+from .decisions import DecisionEngine, AdaptiveRouter
+from .negotiation import NegotiationEngine, ConflictResolver
 
 
 class TeamAgent:
@@ -221,6 +224,17 @@ class AgentTeam:
         
         # Learning engine
         self.learning = TeamLearning(name, self.memory)
+        
+        # Planning engine for strategic execution
+        self.planner = PlanningEngine()
+        
+        # Decision engine for adaptive choices
+        self.decision_engine = DecisionEngine()
+        self.router = AdaptiveRouter()
+        
+        # Negotiation engine for agent interactions
+        self.negotiator = NegotiationEngine()
+        self.conflict_resolver = ConflictResolver()
         
         # Team agents
         self.agents: dict[str, TeamAgent] = {}
@@ -773,3 +787,99 @@ Original task: {task}
     def get_best_practices(self) -> list[dict]:
         """Get team best practices."""
         return self.learning.get_best_practices()
+    
+    # ============== PLANNING ==============
+    
+    def create_plan(self, goal: str) -> dict:
+        """Create a plan for a goal."""
+        plan = self.planner.decompose_goal(goal)
+        return {
+            "name": plan.name,
+            "description": plan.description,
+            "steps_count": len(plan.steps),
+            "estimated_time": plan.get_total_estimated_time(),
+            "steps": [
+                {
+                    "action": s["action"],
+                    "agent": s["agent"],
+                    "expected_outcome": s["expected_outcome"],
+                }
+                for s in plan.steps
+            ],
+        }
+    
+    def get_recommended_plan(self, goal: str) -> dict:
+        """Get a recommended plan for a goal."""
+        return self.planner.get_recommended_plan(goal)
+    
+    # ============== DECISIONS ==============
+    
+    def decide(
+        self,
+        decision_type: str,
+        options: list[str],
+        context: dict = None,
+        strategy: str = "best_match",
+    ) -> dict:
+        """Make a decision."""
+        decision = self.decision_engine.decide(decision_type, options, context, strategy)
+        return decision.to_dict()
+    
+    def record_decision_outcome(self, decision_id: str, outcome: str, was_correct: bool):
+        """Record decision outcome for learning."""
+        self.decision_engine.record_outcome(decision_id, outcome, was_correct)
+    
+    def get_decision_statistics(self) -> dict:
+        """Get decision statistics."""
+        return self.decision_engine.get_statistics()
+    
+    def route_task_adaptively(self, task: str) -> Optional[str]:
+        """Route task adaptively based on learning."""
+        # Get available agents
+        agents = []
+        for agent_id, agent in self.agents.items():
+            profile = self.hub.profiles.get(agent_id)
+            if profile and profile.is_available():
+                agents.append({
+                    "id": agent_id,
+                    "score": profile.can_help_with(task),
+                })
+        
+        return self.router.route(task, agents)
+    
+    # ============== NEGOTIATION ==============
+    
+    def negotiate_resource(
+        self,
+        requester: str,
+        provider: str,
+        resource: str,
+        amount: int,
+        priority: int = 5,
+    ) -> dict:
+        """Negotiate for a resource between agents."""
+        return self.negotiator.negotiate_resource(
+            requester, provider, resource, amount, priority
+        )
+    
+    def start_negotiation(self, agent_a: str, agent_b: str, topic: str) -> dict:
+        """Start a negotiation between two agents."""
+        neg = self.negotiator.start_negotiation(agent_a, agent_b, topic)
+        return {
+            "negotiation_id": neg.negotiation_id,
+            "topic": neg.topic,
+            "agents": [neg.agent_a, neg.agent_b],
+        }
+    
+    def resolve_conflict(
+        self,
+        conflict_type: str,
+        agents: list[str],
+        details: dict,
+    ) -> dict:
+        """Resolve a conflict between agents."""
+        return self.conflict_resolver.resolve(conflict_type, agents, details)
+    
+    def get_negotiation_statistics(self) -> dict:
+        """Get negotiation statistics."""
+        return self.negotiator.get_statistics()

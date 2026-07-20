@@ -755,6 +755,164 @@ async def get_best_practices(team_name: str):
     return {"best_practices": teams[team_name].get_best_practices()}
 
 
+# ============== PLANNING ROUTES ==============
+
+@app.get("/teams/{team_name}/plan", response_model=dict)
+async def create_plan(team_name: str, goal: str):
+    """Create a plan for a goal."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].create_plan(goal)
+
+
+@app.get("/teams/{team_name}/plan/recommend", response_model=dict)
+async def get_recommended_plan(team_name: str, goal: str):
+    """Get a recommended plan for a goal."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_recommended_plan(goal)
+
+
+# ============== DECISION ROUTES ==============
+
+class DecideRequest(BaseModel):
+    """Make a decision."""
+    decision_type: str
+    options: list[str]
+    context: Optional[dict] = None
+    strategy: str = "best_match"
+
+
+@app.post("/teams/{team_name}/decide", response_model=dict)
+async def make_decision(team_name: str, request: DecideRequest):
+    """Make a decision."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].decide(
+        request.decision_type,
+        request.options,
+        request.context,
+        request.strategy,
+    )
+
+
+class RecordDecisionRequest(BaseModel):
+    """Record decision outcome."""
+    decision_id: str
+    outcome: str
+    was_correct: bool
+
+
+@app.post("/teams/{team_name}/decide/record", response_model=dict)
+async def record_decision(team_name: str, request: RecordDecisionRequest):
+    """Record decision outcome."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    teams[team_name].record_decision_outcome(
+        request.decision_id,
+        request.outcome,
+        request.was_correct,
+    )
+    return {"status": "recorded"}
+
+
+@app.get("/teams/{team_name}/decide/stats", response_model=dict)
+async def get_decision_stats(team_name: str):
+    """Get decision statistics."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_decision_statistics()
+
+
+@app.get("/teams/{team_name}/router/adaptive", response_model=dict)
+async def route_adaptively(team_name: str, task: str):
+    """Route task adaptively."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"agent": teams[team_name].route_task_adaptively(task)}
+
+
+# ============== NEGOTIATION ROUTES ==============
+
+class NegotiateRequest(BaseModel):
+    """Negotiate for resource."""
+    requester: str
+    provider: str
+    resource: str
+    amount: int
+    priority: int = 5
+
+
+@app.post("/teams/{team_name}/negotiate", response_model=dict)
+async def negotiate(team_name: str, request: NegotiateRequest):
+    """Negotiate for a resource."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].negotiate_resource(
+        request.requester,
+        request.provider,
+        request.resource,
+        request.amount,
+        request.priority,
+    )
+
+
+class StartNegotiationRequest(BaseModel):
+    """Start a negotiation."""
+    agent_a: str
+    agent_b: str
+    topic: str
+
+
+@app.post("/teams/{team_name}/negotiate/start", response_model=dict)
+async def start_negotiation(team_name: str, request: StartNegotiationRequest):
+    """Start a negotiation."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].start_negotiation(
+        request.agent_a,
+        request.agent_b,
+        request.topic,
+    )
+
+
+class ResolveConflictRequest(BaseModel):
+    """Resolve a conflict."""
+    conflict_type: str
+    agents: list[str]
+    details: dict
+
+
+@app.post("/teams/{team_name}/conflict/resolve", response_model=dict)
+async def resolve_conflict(team_name: str, request: ResolveConflictRequest):
+    """Resolve a conflict."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].resolve_conflict(
+        request.conflict_type,
+        request.agents,
+        request.details,
+    )
+
+
+@app.get("/teams/{team_name}/negotiate/stats", response_model=dict)
+async def get_negotiation_stats(team_name: str):
+    """Get negotiation statistics."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_negotiation_statistics()
+
+
 # ============== STATUS ROUTES ==============
 
 @app.get("/status", response_model=dict)

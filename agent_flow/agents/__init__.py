@@ -13,6 +13,9 @@ from .templates import AGENT_TEMPLATES, get_template, list_templates
 from .hub import SmartAgentHub, AgentProfile, Capability
 from .memory import AgentMemory, TeamMemory, MemoryEntry
 from .learning import AgentLearning, TeamLearning, LearningMetric
+from .planning import Plan, PlanningEngine
+from .decisions import Decision, DecisionEngine, AdaptiveRouter
+from .negotiation import NegotiationOffer, Negotiation, NegotiationEngine, ConflictResolver
 
 __all__ = [
     # Core
@@ -51,4 +54,16 @@ __all__ = [
     "AgentLearning",
     "TeamLearning",
     "LearningMetric",
+    # Planning
+    "Plan",
+    "PlanningEngine",
+    # Decisions
+    "Decision",
+    "DecisionEngine",
+    "AdaptiveRouter",
+    # Negotiation
+    "NegotiationOffer",
+    "Negotiation",
+    "NegotiationEngine",
+    "ConflictResolver",
 ]
