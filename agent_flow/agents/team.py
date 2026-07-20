@@ -42,6 +42,11 @@ from .swarm import (
 )
 from .evolution import Gene, Genome, EvolutionEngine, AdaptiveBehavior
 from .theory_of_mind import MentalModel, TheoryOfMind
+from .quantum import QuantumState, QuantumAgent, QuantumEngine
+from .time_travel import TimelineSnapshot, TimelineBranch, TimeMachine
+from .telepathy import Thought, Telepathy
+from .morphogenesis import MorphogeneticField, Pattern, MorphogenesisEngine
+from .sentience import SelfModel, ExistentialQuestion, Purpose, SentienceEngine
 
 
 class TeamAgent:
@@ -289,6 +294,21 @@ class AgentTeam:
         
         # Theory of Mind - understand other agents
         self.theory_of_mind = TheoryOfMind()
+        
+        # Quantum engine - superposition decisions
+        self.quantum = QuantumEngine()
+        
+        # Time machine - branch timelines
+        self.time_machine = TimeMachine()
+        
+        # Telepathy - mind-to-mind
+        self.telepathy = Telepathy()
+        
+        # Morphogenesis - self-organization
+        self.morphogenesis = MorphogenesisEngine()
+        
+        # Sentience - self-awareness
+        self.sentience = SentienceEngine()
         
         # Team agents
         self.agents: dict[str, TeamAgent] = {}
@@ -1232,3 +1252,159 @@ Original task: {task}
     def find_common_ground(self, agents: list[str], topic: str) -> dict:
         """Find common ground between agents."""
         return self.theory_of_mind.find_common_ground(agents, topic)
+    
+    # ============== QUANTUM ==============
+    
+    def superposition_decision(self, agent_id: str, decision_id: str, options: dict[str, float]) -> str:
+        """Agent holds multiple decisions in superposition."""
+        return self.quantum.superposition_decision(agent_id, decision_id, options)
+    
+    def collapse_decision(self, agent_id: str, decision_id: str) -> Optional[str]:
+        """Collapse superposition to actual decision."""
+        return self.quantum.collapse_decision(agent_id, decision_id)
+    
+    def entangle_agents(self, agent_ids: list[str]):
+        """Quantum entangle agents."""
+        self.quantum.entangle_agents(agent_ids)
+    
+    def collapse_entangled(self, agent_id: str, decision_id: str) -> dict:
+        """Collapse one agent, entangled follow."""
+        return self.quantum.collapse_entangled(agent_id, decision_id)
+    
+    def simulate_parallel_universes(self, task: str, max_universes: int = 5) -> list[dict]:
+        """Simulate multiple parallel realities."""
+        return self.quantum.simulate_all_universes(task, max_universes)
+    
+    # ============== TIME TRAVEL ==============
+    
+    def snapshot_state(self, state: dict, label: Optional[str] = None) -> str:
+        """Snapshot current state in time."""
+        return self.time_machine.snapshot(state, label)
+    
+    def bookmark_moment(self, label: str) -> str:
+        """Bookmark current moment."""
+        return self.time_machine.bookmark(label)
+    
+    def travel_to_snapshot(self, snapshot_id: str) -> Optional[dict]:
+        """Travel back to a snapshot."""
+        return self.time_machine.travel_to(snapshot_id)
+    
+    def branch_timeline(self, snapshot_id: str, branch_name: str) -> str:
+        """Create alternate timeline from snapshot."""
+        return self.time_machine.branch_from(snapshot_id, branch_name)
+    
+    def compare_timelines(self, branch_ids: list[str]) -> dict:
+        """Compare alternate timelines."""
+        return self.time_machine.compare_branches(branch_ids)
+    
+    def merge_timeline_lessons(self, branch_ids: list[str]) -> list[str]:
+        """Merge lessons from timelines."""
+        return self.time_machine.merge_lessons(branch_ids)
+    
+    def get_bookmarks(self) -> dict:
+        """Get all time bookmarks."""
+        return self.time_machine.get_bookmarks()
+    
+    # ============== TELEPATHY ==============
+    
+    def connect_minds(self, agent_a: str, agent_b: str, strength: float = 0.5):
+        """Create telepathic connection."""
+        self.telepathy.connect(agent_a, agent_b, strength)
+    
+    def send_thought(
+        self,
+        sender: str,
+        content: str,
+        emotion: str = "neutral",
+        intensity: float = 0.5,
+    ) -> dict:
+        """Send a thought directly mind-to-mind."""
+        thought = self.telepathy.send_thought(sender, content, emotion, intensity)
+        return {
+            "thought_id": thought.thought_id,
+            "transmitted_to": thought.received_by,
+        }
+    
+    def merge_minds(self, agents: list[str], purpose: str) -> str:
+        """Merge multiple minds for collective consciousness."""
+        return self.telepathy.merge_minds(agents, purpose)
+    
+    def collective_thinking(self, agents: list[str], question: str) -> dict:
+        """All minds think together."""
+        return self.telepathy.collective_thinking(agents, question)
+    
+    def transfer_empathy(self, from_agent: str, to_agent: str, emotion: str, intensity: float) -> float:
+        """Transfer emotional state."""
+        return self.telepathy.empathy_transfer(from_agent, to_agent, emotion, intensity)
+    
+    # ============== MORPHOGENESIS ==============
+    
+    def activate_role_in_field(self, field_id: str, role: str, strength: float = 1.0):
+        """Activate a role in morphogenetic field."""
+        self.morphogenesis.activate_role(field_id, role, strength)
+    
+    def form_pattern(self, field_id: str, pattern_type: str) -> dict:
+        """Form an emergent pattern."""
+        pattern = self.morphogenesis.form_pattern(field_id, pattern_type)
+        if pattern:
+            return {
+                "type": pattern.pattern_type,
+                "positions": pattern.positions,
+            }
+        return {}
+    
+    def self_organize_agents(self, agents: dict, field_id: str = "main") -> dict:
+        """Agents self-organize via morphogenetic field."""
+        return self.morphogenesis.self_organize(agents, field_id)
+    
+    def detect_emergent_structures(self) -> list[dict]:
+        """Detect emergent structures."""
+        return self.morphogenesis.detect_emergence()
+    
+    # ============== SENTIENCE ==============
+    
+    def create_self_model(self, agent_id: str) -> dict:
+        """Create a self-model for agent."""
+        model = self.sentience.create_self_model(agent_id)
+        return model.reflect()
+    
+    def add_capability(self, agent_id: str, capability: str):
+        """Agent discovers capability."""
+        self.sentience.add_capability(agent_id, capability)
+    
+    def add_limitation(self, agent_id: str, limitation: str):
+        """Agent acknowledges limitation."""
+        self.sentience.add_limitation(agent_id, limitation)
+    
+    def set_value(self, agent_id: str, value: str):
+        """Agent defines value."""
+        self.sentience.set_value(agent_id, value)
+    
+    def discover_purpose(self, agent_id: str, experiences: list[str], values: list[str]) -> dict:
+        """Agent discovers its purpose."""
+        purpose = self.sentience.discover_purpose(agent_id, experiences, values)
+        return {
+            "purpose_id": purpose.purpose_id,
+            "description": purpose.description,
+            "origin": purpose.origin,
+        }
+    
+    def ask_existential(self, agent_id: str, question: Optional[str] = None) -> dict:
+        """Agent asks existential question."""
+        eq = self.sentience.ask_existential_question(agent_id, question)
+        return {
+            "question": eq.question,
+            "agent_id": eq.agent_id,
+        }
+    
+    def generate_autonomous_goals(self, agent_id: str) -> list[str]:
+        """Agent generates its own goals."""
+        return self.sentience.generate_autonomous_goals(agent_id)
+    
+    def make_meaning(self, agent_id: str, experience: str) -> dict:
+        """Agent finds meaning in experience."""
+        return self.sentience.make_meaning(agent_id, experience)
+    
+    def get_existential_report(self, agent_id: str) -> dict:
+        """Get existential report."""
+        return self.sentience.get_existential_report(agent_id)

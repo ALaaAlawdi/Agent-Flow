@@ -35,6 +35,11 @@ from .swarm import (
 )
 from .evolution import Gene, Genome, EvolutionEngine, AdaptiveBehavior
 from .theory_of_mind import MentalModel, TheoryOfMind
+from .quantum import QuantumState, QuantumAgent, QuantumEngine
+from .time_travel import TimelineSnapshot, TimelineBranch, TimeMachine
+from .telepathy import Thought, Telepathy
+from .morphogenesis import MorphogeneticField, Pattern, MorphogenesisEngine
+from .sentience import SelfModel, ExistentialQuestion, Purpose, SentienceEngine
 
 __all__ = [
     # Core
@@ -114,4 +119,24 @@ __all__ = [
     # Theory of Mind
     "MentalModel",
     "TheoryOfMind",
+    # Quantum
+    "QuantumState",
+    "QuantumAgent",
+    "QuantumEngine",
+    # Time Travel
+    "TimelineSnapshot",
+    "TimelineBranch",
+    "TimeMachine",
+    # Telepathy
+    "Thought",
+    "Telepathy",
+    # Morphogenesis
+    "MorphogeneticField",
+    "Pattern",
+    "MorphogenesisEngine",
+    # Sentience
+    "SelfModel",
+    "ExistentialQuestion",
+    "Purpose",
+    "SentienceEngine",
 ]
