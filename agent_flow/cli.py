@@ -6,6 +6,7 @@ import os
 import sys
 from pathlib import Path
 
+from .hermes import HermesExecutionError, HermesWorkerAdapter
 from .runtime import CompanyRuntime
 
 
@@ -38,6 +39,17 @@ def build_parser() -> argparse.ArgumentParser:
     status.add_argument("mission_id")
     packets = mission_commands.add_parser("packets", help="Emit bounded packets for ready AI workers")
     packets.add_argument("mission_id")
+    run_hermes = mission_commands.add_parser(
+        "run-hermes",
+        help="Execute one ready task with the Hermes Agent package",
+    )
+    run_hermes.add_argument("mission_id")
+    run_hermes.add_argument("task_id")
+    run_hermes.add_argument("--profile", required=True, help="Isolated Hermes worker profile")
+    run_hermes.add_argument("--toolsets", default="web", help="Comma-separated approved read-only toolsets")
+    run_hermes.add_argument("--workdir", required=True, help="Existing sandbox workspace")
+    run_hermes.add_argument("--hermes-bin", default="hermes")
+    run_hermes.add_argument("--timeout", type=int, default=300)
     complete = mission_commands.add_parser(
         "complete",
         help="Submit a worker artifact proposal; reads its capability token from stdin",
@@ -154,6 +166,42 @@ def main(argv: list[str] | None = None) -> int:
         emit(runtime.mission(args.mission_id))
     elif args.command == "mission" and args.mission_command == "packets":
         emit(runtime.ready_task_packets(args.mission_id))
+    elif args.command == "mission" and args.mission_command == "run-hermes":
+        packet = next(
+            (
+                item
+                for item in runtime.ready_task_packets(args.mission_id, include_capability=False)
+                if item["task_id"] == args.task_id
+            ),
+            None,
+        )
+        if packet is None:
+            parser.error("run-hermes requires a currently ready non-human task")
+        try:
+            adapter = HermesWorkerAdapter(
+                executable=args.hermes_bin,
+                profile=args.profile,
+                toolsets=tuple(part.strip() for part in args.toolsets.split(",") if part.strip()),
+                workdir=args.workdir,
+                timeout_seconds=args.timeout,
+            )
+            evidence = adapter.run_task(packet)
+            runtime.complete_task(
+                args.mission_id,
+                args.task_id,
+                packet["worker_id"],
+                evidence,
+            )
+        except (HermesExecutionError, KeyError, PermissionError, RuntimeError, ValueError) as exc:
+            parser.error(str(exc))
+        emit(
+            {
+                "mission_id": args.mission_id,
+                "task_id": args.task_id,
+                "status": "done",
+                "evidence": evidence,
+            }
+        )
     elif args.command == "mission" and args.mission_command == "complete":
         capability_token = sys.stdin.read(4097).strip()
         if len(capability_token) > 4096:
