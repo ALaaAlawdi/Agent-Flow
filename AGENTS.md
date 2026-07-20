@@ -2,7 +2,9 @@
 
 ## Mission
 
-Build an AI-native venture civilization that can turn ambiguous missions into tested ventures while keeping authority, evidence, budgets, and irreversible actions outside model discretion.
+Build a company operating system staffed by AI agents. Inspired by Hermes Agent's tools, delegation, memory, skills, profiles, gateways, and durable work, Agent-Flow turns those agents into bounded employees that can convert ambiguous missions into tested ventures while keeping authority, evidence, budgets, and irreversible actions outside model discretion.
+
+Agent-Flow is an independent project: Hermes is the design reference and planned first employee adapter; the deterministic company control plane remains provider-neutral.
 
 ## Non-negotiable architecture
 

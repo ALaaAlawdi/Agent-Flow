@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
+import hmac
 import json
+import re
 import sqlite3
+import time
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterator
+from typing import Callable, Iterator
 
 from .domain import VALID_RISKS, VENTURE_WORKFLOW
 
@@ -30,8 +36,115 @@ def utc_now() -> str:
 
 
 class CompanyRuntime:
-    def __init__(self, db_path: str | Path):
+    def __init__(
+        self,
+        db_path: str | Path,
+        *,
+        capability_secret: bytes | None = None,
+        capability_ttl_seconds: int = 300,
+        clock: Callable[[], float] = time.time,
+    ):
+        if capability_secret is not None and len(capability_secret) < 32:
+            raise ValueError("capability secret must be at least 32 bytes")
+        if not isinstance(capability_ttl_seconds, int) or capability_ttl_seconds <= 0:
+            raise ValueError("capability TTL must be a positive integer")
         self.db_path = Path(db_path)
+        self._capability_secret = capability_secret
+        self._capability_ttl_seconds = capability_ttl_seconds
+        self._clock = clock
+
+    @staticmethod
+    def _encode_token_part(value: bytes) -> str:
+        return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
+
+    @staticmethod
+    def _decode_token_part(value: str) -> bytes:
+        if not value or re.fullmatch(r"[A-Za-z0-9_-]+", value) is None:
+            raise ValueError("invalid token segment")
+        padded = value + "=" * (-len(value) % 4)
+        decoded = base64.b64decode(padded.encode("ascii"), altchars=b"-_", validate=True)
+        if CompanyRuntime._encode_token_part(decoded) != value:
+            raise ValueError("non-canonical token segment")
+        return decoded
+
+    def _issue_task_capability(self, mission_id: str, task_id: str, worker_id: str) -> str:
+        if self._capability_secret is None:
+            raise RuntimeError("capability secret is required to issue external worker packets")
+        now = int(self._clock())
+        claims = {
+            "exp": now + self._capability_ttl_seconds,
+            "iat": now,
+            "mission_id": mission_id,
+            "nonce": uuid.uuid4().hex,
+            "task_id": task_id,
+            "worker_id": worker_id,
+        }
+        payload = json.dumps(claims, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        signature = hmac.new(self._capability_secret, payload, hashlib.sha256).digest()
+        return f"{self._encode_token_part(payload)}.{self._encode_token_part(signature)}"
+
+    def _authenticate_task_capability(self, token: str, mission_id: str, task_id: str) -> str:
+        if self._capability_secret is None:
+            raise RuntimeError("capability secret is required to authenticate external workers")
+        if not isinstance(token, str) or len(token) > 4096:
+            raise PermissionError("invalid task capability token")
+        try:
+            payload_part, signature_part = token.split(".")
+            payload = self._decode_token_part(payload_part)
+            supplied_signature = self._decode_token_part(signature_part)
+        except (binascii.Error, ValueError, UnicodeEncodeError) as error:
+            raise PermissionError("invalid task capability token") from error
+        if len(payload) > 2048 or len(supplied_signature) != hashlib.sha256().digest_size:
+            raise PermissionError("invalid task capability token")
+        expected_signature = hmac.new(self._capability_secret, payload, hashlib.sha256).digest()
+        if not hmac.compare_digest(supplied_signature, expected_signature):
+            raise PermissionError("invalid task capability token")
+        try:
+            claims = json.loads(payload)
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise PermissionError("invalid task capability token") from error
+        if not isinstance(claims, dict):
+            raise PermissionError("invalid task capability token")
+        required_claims = {"exp", "iat", "mission_id", "nonce", "task_id", "worker_id"}
+        if set(claims) != required_claims:
+            raise PermissionError("invalid task capability token")
+        if any(
+            type(claims[name]) is not str or not claims[name]
+            for name in ("mission_id", "task_id", "worker_id")
+        ):
+            raise PermissionError("invalid task capability token")
+        issued_at = claims["iat"]
+        expires_at = claims["exp"]
+        nonce = claims["nonce"]
+        if (
+            type(issued_at) is not int
+            or type(expires_at) is not int
+            or type(nonce) is not str
+            or re.fullmatch(r"[0-9a-f]{32}", nonce) is None
+        ):
+            raise PermissionError("invalid task capability token")
+        if claims["mission_id"] != mission_id or claims["task_id"] != task_id:
+            raise PermissionError("task capability token scope mismatch")
+        now = self._clock()
+        if (
+            expires_at <= issued_at
+            or expires_at - issued_at > self._capability_ttl_seconds
+            or issued_at > now + 5
+        ):
+            raise PermissionError("invalid task capability token")
+        if now >= expires_at:
+            raise PermissionError("task capability token has expired")
+        return claims["worker_id"]
+
+    def complete_task_with_capability(
+        self,
+        mission_id: str,
+        task_id: str,
+        capability_token: str,
+        evidence: dict,
+    ) -> None:
+        actor = self._authenticate_task_capability(capability_token, mission_id, task_id)
+        self.complete_task(mission_id, task_id, actor, evidence)
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
@@ -431,6 +544,15 @@ class CompanyRuntime:
                         "may_approve_own_work": False,
                         "may_trigger_external_side_effects": False,
                     },
+                    **(
+                        {
+                            "capability_token": self._issue_task_capability(
+                                mission_id, task["id"], task["assigned_agent"]
+                            )
+                        }
+                        if self._capability_secret is not None
+                        else {}
+                    ),
                 }
             )
         return packets

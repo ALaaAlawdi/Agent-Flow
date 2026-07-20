@@ -1,11 +1,260 @@
+import base64
+import hashlib
+import hmac
+import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from agent_flow.runtime import CompanyRuntime
 
 
+def sign_capability(runtime: CompanyRuntime, secret: bytes, claims: object) -> str:
+    payload = json.dumps(claims, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    signature = hmac.new(secret, payload, hashlib.sha256).digest()
+    return f"{runtime._encode_token_part(payload)}.{runtime._encode_token_part(signature)}"
+
+
 class CompanyRuntimeTests(unittest.TestCase):
+    def test_capability_secret_requires_at_least_32_bytes(self):
+        with self.assertRaisesRegex(ValueError, "32 bytes"):
+            CompanyRuntime("company.db", capability_secret=b"too-short")
+
+    def test_capability_rejects_invalid_ttl_oversized_and_non_object_tokens(self):
+        secret = b"test-secret-with-sufficient-entropy"
+        with self.assertRaisesRegex(ValueError, "TTL"):
+            CompanyRuntime("company.db", capability_secret=secret, capability_ttl_seconds=0)
+
+        runtime = CompanyRuntime("company.db", capability_secret=secret)
+        with self.assertRaisesRegex(PermissionError, "invalid"):
+            runtime._authenticate_task_capability("a" * 4097, "mission", "task")
+
+        token = sign_capability(runtime, secret, [])
+        with self.assertRaisesRegex(PermissionError, "invalid"):
+            runtime._authenticate_task_capability(token, "mission", "task")
+
+    def test_capability_requires_canonical_encoding_and_exact_claim_schema(self):
+        secret = b"test-secret-with-sufficient-entropy"
+        runtime = CompanyRuntime("company.db", capability_secret=secret, clock=lambda: 1_000.0)
+        claims = {
+            "exp": 1_300,
+            "iat": 1_000,
+            "mission_id": "mission",
+            "nonce": "a" * 32,
+            "task_id": "task",
+            "worker_id": "founder",
+        }
+        canonical = sign_capability(runtime, secret, claims)
+        payload_part, signature_part = canonical.split(".")
+        invalid_encodings = [
+            f"{payload_part}=.{signature_part}",
+            f"{payload_part}.{signature_part}=",
+            f"+{payload_part[1:]}.{signature_part}",
+            f"/{payload_part[1:]}.{signature_part}",
+            f"{payload_part}.+{signature_part[1:]}",
+            f"{payload_part}./{signature_part[1:]}",
+        ]
+        for invalid_token in invalid_encodings:
+            with self.subTest(token=invalid_token):
+                with self.assertRaisesRegex(PermissionError, "invalid"):
+                    runtime._authenticate_task_capability(invalid_token, "mission", "task")
+
+        invalid_claims = [
+            {**claims, "unexpected": "claim"},
+            {key: value for key, value in claims.items() if key != "worker_id"},
+            {**claims, "iat": True},
+            {**claims, "exp": True},
+            {**claims, "nonce": "g" * 32},
+            {**claims, "nonce": "A" * 32},
+        ]
+        for malformed in invalid_claims:
+            with self.subTest(claims=malformed):
+                with self.assertRaisesRegex(PermissionError, "invalid"):
+                    runtime._authenticate_task_capability(
+                        sign_capability(runtime, secret, malformed), "mission", "task"
+                    )
+
+    def test_capability_verifies_hmac_before_parsing_json(self):
+        secret = b"test-secret-with-sufficient-entropy"
+        runtime = CompanyRuntime("company.db", capability_secret=secret, clock=lambda: 1_000.0)
+        claims = {
+            "exp": 1_300,
+            "iat": 1_000,
+            "mission_id": "mission",
+            "nonce": "a" * 32,
+            "task_id": "task",
+            "worker_id": "founder",
+        }
+        payload_part, signature_part = sign_capability(runtime, secret, claims).split(".")
+        replacement = "A" if signature_part[0] != "A" else "B"
+        bad_signature_token = f"{payload_part}.{replacement}{signature_part[1:]}"
+
+        with patch("agent_flow.runtime.json.loads") as loads:
+            with self.assertRaisesRegex(PermissionError, "invalid"):
+                runtime._authenticate_task_capability(bad_signature_token, "mission", "task")
+            loads.assert_not_called()
+
+    def test_capability_rejects_invalid_time_invariants(self):
+        secret = b"test-secret-with-sufficient-entropy"
+        runtime = CompanyRuntime(
+            "company.db", capability_secret=secret, capability_ttl_seconds=300, clock=lambda: 1_000.0
+        )
+        claims = {
+            "exp": 1_300,
+            "iat": 1_000,
+            "mission_id": "mission",
+            "nonce": "a" * 32,
+            "task_id": "task",
+            "worker_id": "founder",
+        }
+        invalid_times = [
+            {**claims, "exp": 1_000},
+            {**claims, "exp": 1_301},
+            {**claims, "iat": 1_006, "exp": 1_306},
+        ]
+        for malformed in invalid_times:
+            with self.subTest(claims=malformed):
+                with self.assertRaisesRegex(PermissionError, "invalid"):
+                    runtime._authenticate_task_capability(
+                        sign_capability(runtime, secret, malformed), "mission", "task"
+                    )
+
+    def test_task_capability_token_authorizes_assigned_worker_completion(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            secret = b"test-secret-with-sufficient-entropy"
+            runtime = CompanyRuntime(Path(tmp) / "company.db", capability_secret=secret)
+            runtime.bootstrap()
+            mission_id = runtime.create_mission("Token Co", "Authenticate external worker submissions.", 120)
+            assignments = runtime.form_squad(mission_id)
+            packet = next(
+                packet for packet in runtime.ready_task_packets(mission_id)
+                if packet["task_id"] == "mission_thesis"
+            )
+            wrong_worker = "redteam"
+            self.assertNotEqual(wrong_worker, assignments["mission_thesis"])
+            now = int(runtime._clock())
+            wrong_worker_token = sign_capability(
+                runtime,
+                secret,
+                {
+                    "exp": now + 300,
+                    "iat": now,
+                    "mission_id": mission_id,
+                    "nonce": "a" * 32,
+                    "task_id": "mission_thesis",
+                    "worker_id": wrong_worker,
+                },
+            )
+            with self.assertRaisesRegex(PermissionError, "assigned"):
+                runtime.complete_task_with_capability(
+                    mission_id,
+                    "mission_thesis",
+                    wrong_worker_token,
+                    {"artifact": "thesis.md", "verification": "checked", "summary": "bounded thesis"},
+                )
+
+            runtime.complete_task_with_capability(
+                mission_id,
+                "mission_thesis",
+                packet["capability_token"],
+                {"artifact": "thesis.md", "verification": "checked", "summary": "bounded thesis"},
+            )
+
+            task = next(task for task in runtime.mission(mission_id)["tasks"] if task["id"] == "mission_thesis")
+            self.assertEqual(task["status"], "done")
+
+    def test_task_capability_token_expires(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            now = [1_000.0]
+            runtime = CompanyRuntime(
+                Path(tmp) / "company.db",
+                capability_secret=b"test-secret-with-sufficient-entropy",
+                capability_ttl_seconds=60,
+                clock=lambda: now[0],
+            )
+            runtime.bootstrap()
+            mission_id = runtime.create_mission("Expiry Co", "Reject stale worker authority.", 120)
+            runtime.form_squad(mission_id)
+            packet = next(
+                packet for packet in runtime.ready_task_packets(mission_id)
+                if packet["task_id"] == "mission_thesis"
+            )
+            now[0] = 1_060.0
+
+            with self.assertRaisesRegex(PermissionError, "expired"):
+                runtime.complete_task_with_capability(
+                    mission_id,
+                    "mission_thesis",
+                    packet["capability_token"],
+                    {"artifact": "thesis.md", "verification": "checked", "summary": "bounded thesis"},
+                )
+
+    def test_task_capability_token_rejects_tampered_claims(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            now = [1_000.0]
+            runtime = CompanyRuntime(
+                Path(tmp) / "company.db",
+                capability_secret=b"test-secret-with-sufficient-entropy",
+                capability_ttl_seconds=60,
+                clock=lambda: now[0],
+            )
+            runtime.bootstrap()
+            mission_id = runtime.create_mission("Tamper Co", "Reject forged worker authority.", 120)
+            runtime.form_squad(mission_id)
+            packet = next(
+                packet for packet in runtime.ready_task_packets(mission_id)
+                if packet["task_id"] == "mission_thesis"
+            )
+            payload_part, signature_part = packet["capability_token"].split(".")
+            payload = json.loads(base64.urlsafe_b64decode(payload_part + "=="))
+            payload["exp"] = 2_000
+            forged_payload = base64.urlsafe_b64encode(
+                json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+            ).rstrip(b"=").decode("ascii")
+            forged_token = f"{forged_payload}.{signature_part}"
+            now[0] = 1_060.0
+
+            with self.assertRaisesRegex(PermissionError, "invalid"):
+                runtime.complete_task_with_capability(
+                    mission_id,
+                    "mission_thesis",
+                    forged_token,
+                    {"artifact": "thesis.md", "verification": "checked", "summary": "bounded thesis"},
+                )
+
+    def test_task_capability_token_is_scoped_to_one_mission_and_task(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime = CompanyRuntime(
+                Path(tmp) / "company.db",
+                capability_secret=b"test-secret-with-sufficient-entropy",
+            )
+            runtime.bootstrap()
+            first_mission = runtime.create_mission("First Co", "Issue bounded worker authority.", 120)
+            second_mission = runtime.create_mission("Second Co", "Reject cross-mission authority.", 120)
+            runtime.form_squad(first_mission)
+            runtime.form_squad(second_mission)
+            token = next(
+                packet["capability_token"] for packet in runtime.ready_task_packets(first_mission)
+                if packet["task_id"] == "mission_thesis"
+            )
+
+            with self.assertRaisesRegex(PermissionError, "scope"):
+                runtime.complete_task_with_capability(
+                    second_mission,
+                    "mission_thesis",
+                    token,
+                    {"artifact": "thesis.md", "verification": "checked", "summary": "bounded thesis"},
+                )
+
+            with self.assertRaisesRegex(PermissionError, "scope"):
+                runtime.complete_task_with_capability(
+                    first_mission,
+                    "market_intelligence",
+                    token,
+                    {"artifact": "market.md", "verification": "checked", "summary": "bounded market"},
+                )
+
     def test_bootstrap_registers_default_agents_and_event(self):
         with tempfile.TemporaryDirectory() as tmp:
             runtime = CompanyRuntime(Path(tmp) / "company.db")
@@ -107,7 +356,8 @@ class CompanyRuntimeTests(unittest.TestCase):
 
     def test_launch_requires_real_human_approval_after_all_gates(self):
         with tempfile.TemporaryDirectory() as tmp:
-            runtime = CompanyRuntime(Path(tmp) / "company.db")
+            secret = b"test-secret-with-sufficient-entropy"
+            runtime = CompanyRuntime(Path(tmp) / "company.db", capability_secret=secret)
             runtime.bootstrap()
             mission_id = runtime.create_mission("Constitution Co", "Agents cannot approve themselves.", 120, "critical")
             assignments = runtime.form_squad(mission_id)
@@ -129,6 +379,26 @@ class CompanyRuntimeTests(unittest.TestCase):
 
             tasks = {task["id"]: task for task in runtime.mission(mission_id)["tasks"]}
             self.assertEqual(tasks["human_launch_approval"]["status"], "ready")
+            now = int(runtime._clock())
+            worker_capability_for_human_gate = sign_capability(
+                runtime,
+                secret,
+                {
+                    "exp": now + 300,
+                    "iat": now,
+                    "mission_id": mission_id,
+                    "nonce": "b" * 32,
+                    "task_id": "human_launch_approval",
+                    "worker_id": "governor",
+                },
+            )
+            with self.assertRaisesRegex(PermissionError, "human"):
+                runtime.complete_task_with_capability(
+                    mission_id,
+                    "human_launch_approval",
+                    worker_capability_for_human_gate,
+                    evidence,
+                )
             with self.assertRaises(PermissionError):
                 runtime.complete_task(mission_id, "human_launch_approval", "governor", evidence)
             with self.assertRaisesRegex(PermissionError, "human"):

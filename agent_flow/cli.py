@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
 from pathlib import Path
 
 from .runtime import CompanyRuntime
@@ -36,10 +38,12 @@ def build_parser() -> argparse.ArgumentParser:
     status.add_argument("mission_id")
     packets = mission_commands.add_parser("packets", help="Emit bounded packets for ready AI workers")
     packets.add_argument("mission_id")
-    complete = mission_commands.add_parser("complete", help="Submit a worker artifact proposal")
+    complete = mission_commands.add_parser(
+        "complete",
+        help="Submit a worker artifact proposal; reads its capability token from stdin",
+    )
     complete.add_argument("mission_id")
     complete.add_argument("task_id")
-    complete.add_argument("--actor", required=True)
     complete.add_argument("--artifact", required=True)
     complete.add_argument("--verification", required=True)
     complete.add_argument("--summary", required=True)
@@ -117,8 +121,19 @@ def run_demo(runtime: CompanyRuntime) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
-    runtime = CompanyRuntime(Path(args.db))
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    capability_secret = os.environ.get("AGENT_FLOW_CAPABILITY_SECRET")
+    if (
+        args.command == "mission"
+        and args.mission_command in {"packets", "complete"}
+        and capability_secret is None
+    ):
+        parser.error("AGENT_FLOW_CAPABILITY_SECRET is required for external worker commands")
+    runtime = CompanyRuntime(
+        Path(args.db),
+        capability_secret=capability_secret.encode("utf-8") if capability_secret is not None else None,
+    )
     runtime.bootstrap()
 
     if args.command == "init":
@@ -140,13 +155,18 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "mission" and args.mission_command == "packets":
         emit(runtime.ready_task_packets(args.mission_id))
     elif args.command == "mission" and args.mission_command == "complete":
+        capability_token = sys.stdin.read(4097).strip()
+        if len(capability_token) > 4096:
+            parser.error("mission complete capability token exceeds 4096 characters")
+        if not capability_token:
+            parser.error("mission complete requires a capability token on stdin")
         evidence = {"artifact": args.artifact, "verification": args.verification, "summary": args.summary}
         if args.decision is not None:
             evidence["decision"] = args.decision
-        runtime.complete_task(
+        runtime.complete_task_with_capability(
             args.mission_id,
             args.task_id,
-            args.actor,
+            capability_token,
             evidence,
         )
         emit({"mission_id": args.mission_id, "task_id": args.task_id, "status": "done"})
