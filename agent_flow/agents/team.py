@@ -18,6 +18,8 @@ from .events import EventStore, EventType
 from .queue import TaskQueue, TaskPriority, TaskStatus, Task
 from .workflow_engine import WorkflowEngine
 from .hub import SmartAgentHub
+from .memory import TeamMemory
+from .learning import TeamLearning
 
 
 class TeamAgent:
@@ -213,6 +215,12 @@ class AgentTeam:
         
         # Smart Agent Hub for intelligent coordination
         self.hub = SmartAgentHub(name)
+        
+        # Team memory for learning
+        self.memory = TeamMemory(name)
+        
+        # Learning engine
+        self.learning = TeamLearning(name, self.memory)
         
         # Team agents
         self.agents: dict[str, TeamAgent] = {}
@@ -702,3 +710,66 @@ Original task: {task}
         }
         
         return results
+    
+    # ============== MEMORY & LEARNING ==============
+    
+    def remember(self, agent_id: str, content: str, importance: float = 0.5, tags: Optional[list[str]] = None):
+        """Store a memory for an agent."""
+        return self.memory.share_knowledge(agent_id, content, importance, tags)
+    
+    def recall(self, query: str = "", limit: int = 10) -> list[dict]:
+        """Recall relevant memories from team knowledge."""
+        entries = self.memory.query_team_knowledge(query, limit)
+        return [{"id": e.id, "content": e.content, "importance": e.importance} for e in entries]
+    
+    def get_agent_memory_stats(self, agent_id: str) -> dict:
+        """Get memory statistics for an agent."""
+        agent_mem = self.memory.get_agent_memory(agent_id)
+        return agent_mem.get_stats()
+    
+    def record_task_result(
+        self,
+        agent_id: str,
+        task: str,
+        result: str,
+        success: bool,
+        response_time: float,
+        complexity: float = 0.5,
+        helpers: Optional[list[str]] = None,
+    ):
+        """Record task result for learning."""
+        self.learning.record_task(
+            agent_id=agent_id,
+            task=task,
+            result=result,
+            success=success,
+            response_time=response_time,
+            complexity=complexity,
+            helpers=helpers,
+        )
+    
+    def get_performance_report(self, agent_id: str) -> dict:
+        """Get performance report for an agent."""
+        agent_learning = self.learning.get_agent_learning(agent_id)
+        return agent_learning.get_performance_report()
+    
+    def get_team_performance(self) -> dict:
+        """Get team-wide performance analysis."""
+        return self.learning.analyze_team_performance()
+    
+    def get_suggestions(self, agent_id: str) -> list[str]:
+        """Get improvement suggestions for an agent."""
+        agent_learning = self.learning.get_agent_learning(agent_id)
+        return agent_learning.get_suggestions()
+    
+    def get_team_suggestions(self) -> list[str]:
+        """Get team-wide improvement suggestions."""
+        return self.learning.suggest_improvements()
+    
+    def auto_improve(self) -> dict:
+        """Automatically improve team based on learning."""
+        return self.learning.auto_improve()
+    
+    def get_best_practices(self) -> list[dict]:
+        """Get team best practices."""
+        return self.learning.get_best_practices()

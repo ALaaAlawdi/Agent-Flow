@@ -11,6 +11,8 @@ from .queue import TaskQueue, TaskPriority, TaskStatus
 from .team import AgentTeam, TeamAgent
 from .templates import AGENT_TEMPLATES, get_template, list_templates
 from .hub import SmartAgentHub, AgentProfile, Capability
+from .memory import AgentMemory, TeamMemory, MemoryEntry
+from .learning import AgentLearning, TeamLearning, LearningMetric
 
 __all__ = [
     # Core
@@ -41,4 +43,12 @@ __all__ = [
     "SmartAgentHub",
     "AgentProfile",
     "Capability",
+    # Memory
+    "AgentMemory",
+    "TeamMemory",
+    "MemoryEntry",
+    # Learning
+    "AgentLearning",
+    "TeamLearning",
+    "LearningMetric",
 ]

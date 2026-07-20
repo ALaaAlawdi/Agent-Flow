@@ -52,6 +52,7 @@ class EventType(str, Enum):
     HELP_REQUESTED = "help_requested"
     HELP_OFFERED = "help_offered"
     GOAL_DECOMPOSED = "goal_decomposed"
+    INSIGHT_GAINED = "insight_gained"
 
 
 class Event:

@@ -629,6 +629,132 @@ async def execute_autonomous(team_name: str, request: ExecuteAutonomousRequest):
     return result
 
 
+# ============== MEMORY & LEARNING ROUTES ==============
+
+class RememberRequest(BaseModel):
+    """Request to store a memory."""
+    agent_id: str
+    content: str
+    importance: float = 0.5
+    tags: Optional[list[str]] = None
+
+
+@app.post("/teams/{team_name}/memory", response_model=dict)
+async def store_memory(team_name: str, request: RememberRequest):
+    """Store a memory for an agent."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    memory = teams[team_name].remember(
+        request.agent_id,
+        request.content,
+        request.importance,
+        request.tags,
+    )
+    return {"memory_id": memory.id}
+
+
+@app.get("/teams/{team_name}/memory", response_model=dict)
+async def recall_memories(team_name: str, query: str = "", limit: int = 10):
+    """Recall relevant memories."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"memories": teams[team_name].recall(query, limit)}
+
+
+@app.get("/teams/{team_name}/agents/{agent_id}/memory-stats", response_model=dict)
+async def get_memory_stats(team_name: str, agent_id: str):
+    """Get memory statistics for an agent."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_agent_memory_stats(agent_id)
+
+
+class RecordTaskResultRequest(BaseModel):
+    """Record task result."""
+    agent_id: str
+    task: str
+    result: str
+    success: bool
+    response_time: float
+    complexity: float = 0.5
+    helpers: Optional[list[str]] = None
+
+
+@app.post("/teams/{team_name}/learning/record", response_model=dict)
+async def record_task_result(team_name: str, request: RecordTaskResultRequest):
+    """Record task result for learning."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    teams[team_name].record_task_result(
+        request.agent_id,
+        request.task,
+        request.result,
+        request.success,
+        request.response_time,
+        request.complexity,
+        request.helpers,
+    )
+    return {"status": "recorded"}
+
+
+@app.get("/teams/{team_name}/learning/performance/{agent_id}", response_model=dict)
+async def get_agent_performance(team_name: str, agent_id: str):
+    """Get performance report for an agent."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_performance_report(agent_id)
+
+
+@app.get("/teams/{team_name}/learning/performance", response_model=dict)
+async def get_team_performance(team_name: str):
+    """Get team-wide performance analysis."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_team_performance()
+
+
+@app.get("/teams/{team_name}/learning/suggestions/{agent_id}", response_model=dict)
+async def get_agent_suggestions(team_name: str, agent_id: str):
+    """Get improvement suggestions for an agent."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"suggestions": teams[team_name].get_suggestions(agent_id)}
+
+
+@app.get("/teams/{team_name}/learning/suggestions", response_model=dict)
+async def get_team_suggestions(team_name: str):
+    """Get team-wide improvement suggestions."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"suggestions": teams[team_name].get_team_suggestions()}
+
+
+@app.post("/teams/{team_name}/learning/auto-improve", response_model=dict)
+async def auto_improve(team_name: str):
+    """Automatically improve team based on learning."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].auto_improve()
+
+
+@app.get("/teams/{team_name}/learning/best-practices", response_model=dict)
+async def get_best_practices(team_name: str):
+    """Get team best practices."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"best_practices": teams[team_name].get_best_practices()}
+
+
 # ============== STATUS ROUTES ==============
 
 @app.get("/status", response_model=dict)
