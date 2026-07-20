@@ -26,6 +26,15 @@ from .hermes_integration import (
     HermesSkills,
     AIAgentAdvanced,
 )
+from .dreams import Dream, DreamEngine
+from .meta_cognition import (
+    ThoughtTrace, MetaCognition, CognitiveStrategy, StrategySelector
+)
+from .swarm import (
+    Pheromone, SwarmIntelligence, SwarmBehavior
+)
+from .evolution import Gene, Genome, EvolutionEngine, AdaptiveBehavior
+from .theory_of_mind import MentalModel, TheoryOfMind
 
 __all__ = [
     # Core
@@ -85,4 +94,24 @@ __all__ = [
     "HermesActiveSessions",
     "HermesSkills",
     "AIAgentAdvanced",
+    # Dreams
+    "Dream",
+    "DreamEngine",
+    # Meta-cognition
+    "ThoughtTrace",
+    "MetaCognition",
+    "CognitiveStrategy",
+    "StrategySelector",
+    # Swarm
+    "Pheromone",
+    "SwarmIntelligence",
+    "SwarmBehavior",
+    # Evolution
+    "Gene",
+    "Genome",
+    "EvolutionEngine",
+    "AdaptiveBehavior",
+    # Theory of Mind
+    "MentalModel",
+    "TheoryOfMind",
 ]

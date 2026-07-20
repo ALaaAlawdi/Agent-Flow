@@ -33,6 +33,15 @@ from .hermes_integration import (
     HermesSkills,
     AIAgentAdvanced,
 )
+from .dreams import Dream, DreamEngine
+from .meta_cognition import (
+    ThoughtTrace, MetaCognition, CognitiveStrategy, StrategySelector
+)
+from .swarm import (
+    Pheromone, SwarmIntelligence, SwarmBehavior
+)
+from .evolution import Gene, Genome, EvolutionEngine, AdaptiveBehavior
+from .theory_of_mind import MentalModel, TheoryOfMind
 
 
 class TeamAgent:
@@ -262,6 +271,24 @@ class AgentTeam:
         
         # Skills integration
         self.skills = HermesSkills()
+        
+        # Dream engine - background creative thinking
+        self.dream_engine = DreamEngine()
+        
+        # Meta-cognition - thinking about thinking
+        self.meta_cognition = MetaCognition()
+        
+        # Swarm intelligence - stigmergic coordination
+        self.swarm = SwarmIntelligence()
+        
+        # Evolution engine - improving over generations
+        self.evolution = EvolutionEngine(population_size=10)
+        
+        # Adaptive behaviors
+        self.adaptive_behaviors = AdaptiveBehavior()
+        
+        # Theory of Mind - understand other agents
+        self.theory_of_mind = TheoryOfMind()
         
         # Team agents
         self.agents: dict[str, TeamAgent] = {}
@@ -1025,3 +1052,183 @@ Original task: {task}
             "moa_presets_count": len(self.list_moa_presets()),
             "aiagent_capabilities": AIAgentAdvanced.get_capabilities(),
         }
+    
+    # ============== DREAM MODE ==============
+    
+    def dream(self, agent_id: str) -> Optional[dict]:
+        """An agent enters dream mode - creative background thinking.
+        
+        Combines memories to find novel patterns and insights.
+        """
+        # Get agent's memories
+        agent_mem = self.memory.get_agent_memory(agent_id)
+        memory_contents = [m.content for m in list(agent_mem.memories.values())[:20]]
+        
+        if not memory_contents:
+            memory_contents = [
+                f"Working on {self.goal}",
+                "Recent task: " + str(list(self.agents.keys())),
+            ]
+        
+        dream = self.dream_engine.dream(agent_id, memory_contents)
+        return dream.to_dict() if dream else None
+    
+    def get_top_dreams(self, limit: int = 5) -> list[dict]:
+        """Get top creative dreams."""
+        return [d.to_dict() for d in self.dream_engine.get_top_dreams(limit)]
+    
+    # ============== META-COGNITION ==============
+    
+    def reflect(
+        self,
+        agent_id: str,
+        situation: str,
+        proposed_decision: str,
+        reasoning: list[str],
+        confidence: float,
+    ) -> dict:
+        """Agent reflects on its own thinking."""
+        trace = self.meta_cognition.think_about_thinking(
+            agent_id, situation, proposed_decision, reasoning, confidence,
+        )
+        return {
+            "trace_id": trace.trace_id,
+            "biases_detected": trace.biases_detected,
+            "calibrated_confidence": trace.confidence,
+            "reasoning_chain": trace.reasoning_chain,
+        }
+    
+    def record_reflection_outcome(self, trace_id: str, was_correct: bool):
+        """Record if a reflection was correct."""
+        self.meta_cognition.record_outcome(trace_id, was_correct)
+    
+    def select_thinking_strategy(self, situation: str) -> dict:
+        """Select best thinking strategy for a situation."""
+        strategy_name = StrategySelector.select_strategy(situation)
+        strategy = StrategySelector.get_strategy(strategy_name)
+        return {
+            "strategy": strategy_name,
+            "description": strategy.description,
+            "steps": strategy.steps,
+        }
+    
+    def get_bias_report(self) -> dict:
+        """Get report on cognitive biases detected."""
+        return self.meta_cognition.get_bias_report()
+    
+    # ============== SWARM INTELLIGENCE ==============
+    
+    def deposit_pheromone(
+        self,
+        agent_id: str,
+        location: str,
+        pheromone_type: str = "trail",
+        strength: float = 0.5,
+    ) -> dict:
+        """Agent deposits a pheromone (indirect coordination)."""
+        ph = self.swarm.deposit_pheromone(agent_id, location, pheromone_type, strength)
+        return ph.to_dict()
+    
+    def sense_pheromones(self, location: str, pheromone_type: Optional[str] = None) -> list[dict]:
+        """Sense pheromones at a location."""
+        ph_list = self.swarm.sense_pheromones(location, pheromone_type)
+        return [p.to_dict() for p in ph_list]
+    
+    def follow_pheromone(self, agent_id: str, pheromone_id: str) -> bool:
+        """Agent follows a pheromone trail."""
+        return self.swarm.follow_pheromone(agent_id, pheromone_id)
+    
+    def decay_pheromones(self):
+        """Decay all pheromones."""
+        self.swarm.decay_pheromones()
+    
+    def swarm_consensus(self, agents_opinions: dict[str, Any], threshold: float = 0.6) -> dict:
+        """Reach consensus from multiple agents."""
+        return self.swarm.swarm_consensus(agents_opinions, threshold)
+    
+    def detect_emergent_behavior(self, recent_actions: list[dict]) -> list[dict]:
+        """Detect emergent swarm behaviors."""
+        return self.swarm.detect_emergent_behavior(recent_actions)
+    
+    def get_swarm_state(self) -> dict:
+        """Get swarm state."""
+        return self.swarm.get_swarm_state()
+    
+    # ============== EVOLUTION ==============
+    
+    def evolve_agents(self) -> dict:
+        """Evolve the agent population to next generation.
+        
+        Natural selection based on performance.
+        """
+        # Initialize genomes for agents if not already done
+        from .evolution import Genome, Gene
+        
+        for agent_id, agent in self.agents.items():
+            if agent_id not in self.evolution.population:
+                # Create genome from agent properties
+                genome = Genome(
+                    agent_id,
+                    [
+                        Gene("role", agent.role if hasattr(agent, 'role') else "agent"),
+                        Gene("tools_count", len(agent.tools) if hasattr(agent, 'tools') else 0),
+                        Gene("success_rate", 0.5, 0.0, 1.0),
+                        Gene("collaboration", 0.5, 0.0, 1.0),
+                    ],
+                )
+                self.evolution.add_individual(genome)
+            
+            # Update fitness from learning data
+            report = self.get_performance_report(agent_id)
+            self.evolution.evaluate_fitness(agent_id, report.get("success_rate", 0.5))
+        
+        return self.evolution.evolve_generation()
+    
+    def get_evolution_stats(self) -> dict:
+        """Get evolution statistics."""
+        return self.evolution.get_population_stats()
+    
+    def get_best_evolved_agent(self) -> Optional[dict]:
+        """Get the fittest evolved agent."""
+        best = self.evolution.get_best_individual()
+        if best:
+            return {
+                "agent_id": best.agent_id,
+                "fitness": best.fitness,
+                "generation": best.generation,
+                "genes": {k: v.value for k, v in best.genes.items()},
+            }
+        return None
+    
+    # ============== THEORY OF MIND ==============
+    
+    def observe_agent(
+        self,
+        observer: str,
+        target: str,
+        action: str,
+        context: dict = None,
+    ):
+        """Observer watches target and builds mental model."""
+        self.theory_of_mind.observe(observer, target, action, context)
+    
+    def predict_agent_action(
+        self,
+        owner: str,
+        target: str,
+        situation: dict,
+    ) -> dict:
+        """Predict what another agent will do."""
+        return self.theory_of_mind.predict_action(owner, target, situation)
+    
+    def record_agent_observation(self, owner: str, target: str, actual_action: str):
+        """Record actual action for prediction accuracy."""
+        self.theory_of_mind.record_observation(owner, target, actual_action)
+    
+    def get_agent_perspective(self, owner: str, target: str) -> dict:
+        """Get mental model of another agent."""
+        return self.theory_of_mind.get_perspective(owner, target)
+    
+    def find_common_ground(self, agents: list[str], topic: str) -> dict:
+        """Find common ground between agents."""
+        return self.theory_of_mind.find_common_ground(agents, topic)
