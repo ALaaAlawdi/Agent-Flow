@@ -40,6 +40,23 @@ from .time_travel import TimelineSnapshot, TimelineBranch, TimeMachine
 from .telepathy import Thought, Telepathy
 from .morphogenesis import MorphogeneticField, Pattern, MorphogenesisEngine
 from .sentience import SelfModel, ExistentialQuestion, Purpose, SentienceEngine
+from .super_reasoning import (
+    CausalGraph, Counterfactual, Analogy, SuperReasoner, InferenceEngine
+)
+from .hypercomputation import (
+    ComputationCache, SpeculativeExecutor, VectorizedOperations,
+    ParallelPipeline, Hypercomputer
+)
+from .creativity import (
+    Concept, NoveltyMeter, HypothesisGenerator, CreativeEngine
+)
+from .oracle import (
+    Trend, Forecast, BayesianInference, MonteCarloSimulator,
+    EarlyWarningSystem, Oracle
+)
+from .empathy import (
+    EmotionalState, EmpathyEngine
+)
 
 __all__ = [
     # Core
@@ -139,4 +156,31 @@ __all__ = [
     "ExistentialQuestion",
     "Purpose",
     "SentienceEngine",
+    # Superhuman Reasoning
+    "CausalGraph",
+    "Counterfactual",
+    "Analogy",
+    "SuperReasoner",
+    "InferenceEngine",
+    # Hypercomputation
+    "ComputationCache",
+    "SpeculativeExecutor",
+    "VectorizedOperations",
+    "ParallelPipeline",
+    "Hypercomputer",
+    # Creativity
+    "Concept",
+    "NoveltyMeter",
+    "HypothesisGenerator",
+    "CreativeEngine",
+    # Oracle
+    "Trend",
+    "Forecast",
+    "BayesianInference",
+    "MonteCarloSimulator",
+    "EarlyWarningSystem",
+    "Oracle",
+    # Empathy
+    "EmotionalState",
+    "EmpathyEngine",
 ]
