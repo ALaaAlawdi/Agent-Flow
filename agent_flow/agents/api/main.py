@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from agent_flow.agents import AgentTeam
+from agent_flow.agents import AgentTeam, DemoRunner, SCENARIOS
 from hermes_cli.toolset_validation import validate_platform_toolsets
 
 
@@ -47,6 +47,7 @@ class AddAgentRequest(BaseModel):
     role: str
     tools: list[str]
     system_prompt: Optional[str] = ""
+    model: Optional[str] = None  # e.g., "gpt-4o", "gpt-4o-mini" (defaults to gpt-4o-mini)
 
 
 class SetGoalRequest(BaseModel):
@@ -180,13 +181,15 @@ async def add_agent(team_name: str, request: AddAgentRequest):
         request.role,
         request.tools,
         request.system_prompt or "",
+        model=request.model,
     )
-    
+
     return {
         "status": "added",
         "team": team_name,
         "agent_id": request.agent_id,
         "role": request.role,
+        "model": request.model or "gpt-4o-mini (default)",
     }
 
 
@@ -1100,6 +1103,338 @@ async def get_hermes_status(team_name: str):
     return teams[team_name].get_hermes_status()
 
 
+# ============== INTERACTION TRACKING ROUTES (for UI) ==============
+
+@app.get("/teams/{team_name}/interactions", response_model=dict)
+async def get_interactions(
+    team_name: str,
+    type: Optional[str] = None,
+    agent_id: Optional[str] = None,
+    limit: int = 100,
+):
+    """Get interaction stream for UI display.
+    
+    Query params:
+    - type: Filter by interaction type (e.g., 'message_sent', 'task_completed')
+    - agent_id: Filter by agent
+    - limit: Max number of interactions
+    """
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    interactions = teams[team_name].get_interaction_stream(
+        interaction_type=type,
+        agent_id=agent_id,
+        limit=limit,
+    )
+    
+    return {
+        "interactions": interactions,
+        "count": len(interactions),
+    }
+
+
+@app.get("/teams/{team_name}/interactions/timeline", response_model=dict)
+async def get_interaction_timeline(team_name: str, limit: int = 500):
+    """Get full timeline of interactions (chronological)."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {
+        "timeline": teams[team_name].get_interaction_timeline(limit=limit),
+    }
+
+
+@app.get("/teams/{team_name}/interactions/stats", response_model=dict)
+async def get_interaction_stats(team_name: str):
+    """Get interaction statistics for dashboard."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_interaction_statistics()
+
+
+@app.get("/teams/{team_name}/interactions/active-agents", response_model=dict)
+async def get_active_agents(team_name: str):
+    """Get currently active agents based on recent interactions."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {
+        "active_agents": teams[team_name].get_active_agents(),
+    }
+
+
+@app.get("/teams/{team_name}/interactions/graph", response_model=dict)
+async def get_interaction_graph(team_name: str):
+    """Get interaction graph for visualization (nodes + edges)."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_interaction_graph()
+
+
+# ============== CONVERSATION ROUTES ==============
+
+class StartConversationRequest(BaseModel):
+    """Start conversation."""
+    participants: list[str]
+    topic: str = ""
+
+
+@app.post("/teams/{team_name}/conversations", response_model=dict)
+async def start_conversation(team_name: str, request: StartConversationRequest):
+    """Start a conversation between agents."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    conv_id = teams[team_name].start_conversation(
+        request.participants,
+        request.topic,
+    )
+    
+    return {"conversation_id": conv_id}
+
+
+class ConversationMessageRequest(BaseModel):
+    """Message in conversation."""
+    sender: str
+    content: str
+    type: str = "text"
+
+
+@app.post("/teams/{team_name}/conversations/{conv_id}/messages", response_model=dict)
+async def add_conversation_message(
+    team_name: str,
+    conv_id: str,
+    request: ConversationMessageRequest,
+):
+    """Add a message to conversation."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    msg = teams[team_name].add_conversation_message(
+        conv_id,
+        request.sender,
+        request.content,
+        request.type,
+    )
+    
+    if not msg:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    return msg
+
+
+@app.get("/teams/{team_name}/conversations/{conv_id}", response_model=dict)
+async def get_conversation(team_name: str, conv_id: str):
+    """Get a conversation by ID."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    conv = teams[team_name].get_conversation(conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    return conv
+
+
+@app.get("/teams/{team_name}/conversations", response_model=dict)
+async def list_conversations(
+    team_name: str,
+    participant: Optional[str] = None,
+    limit: int = 50,
+):
+    """List conversations."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {
+        "conversations": teams[team_name].list_conversations(participant, limit),
+    }
+
+
+# ============== WEBSOCKET FOR LIVE INTERACTIONS ==============
+
+try:
+    from fastapi import WebSocket, WebSocketDisconnect
+    
+    @app.websocket("/teams/{team_name}/ws/interactions")
+    async def websocket_interactions(websocket: WebSocket, team_name: str):
+        """WebSocket endpoint for live interaction stream."""
+        await websocket.accept()
+        
+        if team_name not in teams:
+            await websocket.send_json({"error": "Team not found"})
+            await websocket.close()
+            return
+        
+        # Subscribe to interaction stream
+        async def send_interaction(interaction_dict):
+            try:
+                await websocket.send_json(interaction_dict)
+            except Exception:
+                pass
+        
+        # Sync callback for the stream
+        def sync_callback(interaction_dict):
+            # Schedule async send
+            import asyncio
+            asyncio.create_task(send_interaction(interaction_dict))
+        
+        teams[team_name].subscribe_to_interactions(sync_callback)
+        
+        try:
+            # Send initial state
+            await websocket.send_json({
+                "type": "connected",
+                "team": team_name,
+                "message": "Subscribed to interaction stream",
+            })
+            
+            # Keep connection alive
+            while True:
+                data = await websocket.receive_text()
+                # Echo back or handle client messages
+                if data == "ping":
+                    await websocket.send_json({"type": "pong"})
+        except WebSocketDisconnect:
+            teams[team_name].unsubscribe_from_interactions(sync_callback)
+        except Exception:
+            teams[team_name].unsubscribe_from_interactions(sync_callback)
+            try:
+                await websocket.close()
+            except Exception:
+                pass
+
+except ImportError:
+    # WebSocket not available
+    pass
+
+
+# ============== PERSISTENCE ROUTES ==============
+
+@app.post("/teams/{team_name}/persist", response_model=dict)
+async def persist_team(team_name: str):
+    """Manually trigger persistence save."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    teams[team_name].auto_persistence.flush()
+    return {"status": "saved"}
+
+
+@app.get("/teams/{team_name}/history", response_model=dict)
+async def get_team_history(
+    team_name: str,
+    type: Optional[str] = None,
+    agent_id: Optional[str] = None,
+    limit: int = 100,
+):
+    """Get team history from disk (persisted)."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    history = teams[team_name].persistence.load_interactions(
+        team_name=team_name,
+        limit=limit,
+        interaction_type=type,
+        agent_id=agent_id,
+    )
+    
+    return {
+        "history": history,
+        "count": len(history),
+        "persisted": True,
+    }
+
+
+@app.get("/teams/{team_name}/stats", response_model=dict)
+async def get_team_db_stats(team_name: str):
+    """Get team statistics from database."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].persistence.get_team_stats(team_name)
+
+
+@app.get("/teams", response_model=dict)
+async def list_all_teams():
+    """List all teams in the database."""
+    # Use the first team's persistence manager to access all teams
+    if not teams:
+        return {"teams": []}
+    
+    first_team = next(iter(teams.values()))
+    return {"teams": first_team.persistence.list_teams()}
+
+
+# ============== DEMO SCENARIOS ROUTES ==============
+
+@app.get("/scenarios", response_model=dict)
+async def list_scenarios():
+    """List all available demo scenarios.
+    
+    Each scenario pre-fills a team with agents and runs them
+    through a realistic workflow. Perfect for UI demos.
+    """
+    return {
+        "scenarios": DemoRunner.list_scenarios(),
+    }
+
+
+@app.get("/scenarios/{scenario_id}", response_model=dict)
+async def get_scenario(scenario_id: str):
+    """Get details of a specific scenario."""
+    scenario = DemoRunner.get_scenario(scenario_id)
+    if not scenario:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    
+    return {
+        **scenario.to_dict(),
+        "team_config": scenario.team_config,
+        "steps": scenario.run_steps,
+    }
+
+
+@app.post("/scenarios/{scenario_id}/run", response_model=dict)
+async def run_scenario(scenario_id: str):
+    """Run a demo scenario - pre-fills team, agents, and executes steps.
+    
+    Returns a summary with:
+    - Number of agents added
+    - Steps executed
+    - Final stats
+    """
+    result = await DemoRunner.run_scenario(scenario_id, teams)
+    return result
+
+
+# ============== MODELS ROUTES ==============
+
+@app.get("/models", response_model=dict)
+async def list_models():
+    """List all available AI models (OpenAI is default)."""
+    from agent_flow.agents.factory import DynamicAgentFactory
+    
+    return {
+        "models": DynamicAgentFactory.list_available_models(),
+        "default": DynamicAgentFactory.DEFAULT_MODEL,
+        "providers": ["openai", "anthropic", "google", "meta"],
+    }
+
+
+@app.get("/models/default", response_model=dict)
+async def get_default_model():
+    """Get the default model."""
+    from agent_flow.agents.factory import DynamicAgentFactory
+    
+    return {
+        "default_model": DynamicAgentFactory.DEFAULT_MODEL,
+        "note": "All agents use OpenAI models by default",
+    }
+
+
 # ============== STATUS ROUTES ==============
 
 @app.get("/status", response_model=dict)
@@ -1124,14 +1459,31 @@ async def root():
     """Root endpoint with API info."""
     return {
         "name": "Agent-Flow Team API",
-        "version": "0.2.0",
-        "description": "Collaborative multi-agent teams powered by Hermes",
+        "version": "0.3.0",
+        "description": "Collaborative multi-agent teams powered by Hermes + OpenAI",
         "docs": "/docs",
+        "demo_ui": "/demo",
+        "scenarios": "/scenarios",
+        "models": "/models",
         "features": [
             "Dynamic agent creation - no hardcoded agents",
-            "Shared environment - agents work in same workspace",
-            "Inter-agent communication - agents can message each other",
-            "Goal-oriented execution - team works towards common goal",
-            "Learning system - agents improve over time",
+            "21 cognitive capabilities (superhuman AI)",
+            "OpenAI models by default (gpt-4o-mini)",
+            "Real-time interaction tracking",
+            "Pre-built demo scenarios (one-click)",
+            "Persistent history (survives restart)",
+            "WebSocket live updates",
         ],
     }
+
+
+@app.get("/demo")
+async def demo_ui():
+    """Serve the demo HTML page."""
+    from fastapi.responses import HTMLResponse
+    from pathlib import Path
+    
+    demo_path = Path(__file__).parent.parent.parent.parent / "demo.html"
+    if demo_path.exists():
+        return HTMLResponse(content=demo_path.read_text(encoding="utf-8"))
+    return HTMLResponse(content="<h1>Demo file not found</h1>", status_code=404)

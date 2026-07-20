@@ -26,6 +26,43 @@ from .hermes_integration import (
     HermesSkills,
     AIAgentAdvanced,
 )
+from .dreams import Dream, DreamEngine
+from .meta_cognition import (
+    ThoughtTrace, MetaCognition, CognitiveStrategy, StrategySelector
+)
+from .swarm import (
+    Pheromone, SwarmIntelligence, SwarmBehavior
+)
+from .evolution import Gene, Genome, EvolutionEngine, AdaptiveBehavior
+from .theory_of_mind import MentalModel, TheoryOfMind
+from .quantum import QuantumState, QuantumAgent, QuantumEngine
+from .time_travel import TimelineSnapshot, TimelineBranch, TimeMachine
+from .telepathy import Thought, Telepathy
+from .morphogenesis import MorphogeneticField, Pattern, MorphogenesisEngine
+from .sentience import SelfModel, ExistentialQuestion, Purpose, SentienceEngine
+from .super_reasoning import (
+    CausalGraph, Counterfactual, Analogy, SuperReasoner, InferenceEngine
+)
+from .hypercomputation import (
+    ComputationCache, SpeculativeExecutor, VectorizedOperations,
+    ParallelPipeline, Hypercomputer
+)
+from .creativity import (
+    Concept, NoveltyMeter, HypothesisGenerator, CreativeEngine
+)
+from .oracle import (
+    Trend, Forecast, BayesianInference, MonteCarloSimulator,
+    EarlyWarningSystem, Oracle
+)
+from .empathy import (
+    EmotionalState, EmpathyEngine
+)
+from .interactions import (
+    InteractionType, Interaction, InteractionStream,
+    AgentConversation, ConversationManager
+)
+from .persistence import PersistenceManager, AutoPersistence
+from .demo_scenarios import SCENARIOS, DemoRunner, DemoScenario
 
 __all__ = [
     # Core
@@ -85,4 +122,84 @@ __all__ = [
     "HermesActiveSessions",
     "HermesSkills",
     "AIAgentAdvanced",
+    # Dreams
+    "Dream",
+    "DreamEngine",
+    # Meta-cognition
+    "ThoughtTrace",
+    "MetaCognition",
+    "CognitiveStrategy",
+    "StrategySelector",
+    # Swarm
+    "Pheromone",
+    "SwarmIntelligence",
+    "SwarmBehavior",
+    # Evolution
+    "Gene",
+    "Genome",
+    "EvolutionEngine",
+    "AdaptiveBehavior",
+    # Theory of Mind
+    "MentalModel",
+    "TheoryOfMind",
+    # Quantum
+    "QuantumState",
+    "QuantumAgent",
+    "QuantumEngine",
+    # Time Travel
+    "TimelineSnapshot",
+    "TimelineBranch",
+    "TimeMachine",
+    # Telepathy
+    "Thought",
+    "Telepathy",
+    # Morphogenesis
+    "MorphogeneticField",
+    "Pattern",
+    "MorphogenesisEngine",
+    # Sentience
+    "SelfModel",
+    "ExistentialQuestion",
+    "Purpose",
+    "SentienceEngine",
+    # Superhuman Reasoning
+    "CausalGraph",
+    "Counterfactual",
+    "Analogy",
+    "SuperReasoner",
+    "InferenceEngine",
+    # Hypercomputation
+    "ComputationCache",
+    "SpeculativeExecutor",
+    "VectorizedOperations",
+    "ParallelPipeline",
+    "Hypercomputer",
+    # Creativity
+    "Concept",
+    "NoveltyMeter",
+    "HypothesisGenerator",
+    "CreativeEngine",
+    # Oracle
+    "Trend",
+    "Forecast",
+    "BayesianInference",
+    "MonteCarloSimulator",
+    "EarlyWarningSystem",
+    "Oracle",
+    # Empathy
+    "EmotionalState",
+    "EmpathyEngine",
+    # Interactions
+    "InteractionType",
+    "Interaction",
+    "InteractionStream",
+    "AgentConversation",
+    "ConversationManager",
+    # Persistence
+    "PersistenceManager",
+    "AutoPersistence",
+    # Demo Scenarios
+    "SCENARIOS",
+    "DemoRunner",
+    "DemoScenario",
 ]
