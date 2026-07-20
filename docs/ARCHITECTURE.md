@@ -34,7 +34,7 @@ AI employee adapter (Hermes first; provider-neutral contract)
 Deterministic validation → independent review → state transition
 ```
 
-The planned adapter maps Hermes-style primitives into company controls:
+The Hermes adapter maps employee-runtime primitives into company controls:
 
 | Employee primitive | Company control |
 |---|---|
@@ -46,13 +46,14 @@ The planned adapter maps Hermes-style primitives into company controls:
 | Cron/durable execution | Scheduled mission trigger, lease renewal, retry, and escalation |
 | Gateway | Human supervision surfaces, not a bypass around approval policy |
 
-The current repository does **not** yet launch Hermes processes. v0.1 provides the deterministic control plane and authenticated submission protocol needed before adding that adapter.
+v0.2 invokes the official `NousResearch/hermes-agent` GitHub `main` source through its `hermes --oneshot` CLI entry point; Agent-Flow does not copy or reimplement Hermes. `uv.lock` records the resolved upstream commit. `agent_flow/hermes.py` is limited to task projection, process invocation, and Evidence Proposal validation, while `agent_flow/cli.py` performs the deterministic Runtime submission.
 
 ## Current modules
 
 - `agent_flow/domain.py` — immutable workflow and risk vocabulary.
 - `agent_flow/runtime.py` — SQLite schema, company state machine, evidence rules, reputation, approvals, events, and lessons.
-- `agent_flow/cli.py` — local operator interface and safe deterministic demo.
+- `agent_flow/hermes.py` — Hermes package subprocess boundary, packet sanitization, and evidence validation.
+- `agent_flow/cli.py` — local operator interface, Hermes task execution, and safe deterministic demo.
 - `tests/` — end-to-end invariants against disposable databases.
 
 ## Persistent model
@@ -91,7 +92,7 @@ Board-gated build/pivot/kill/incident conclusions that become organizational mem
 
 ## Threat model
 
-Treat worker output, evidence text, retrieved documents, URLs, and prompt content as untrusted. Important future controls:
+Treat worker output, evidence text, retrieved documents, URLs, and prompt content as untrusted. Hermes `--oneshot` auto-bypasses interactive tool approval, so the adapter rejects wildcard toolsets and requires an explicit profile and existing workspace; operators must still provide OS/container isolation. Important remaining controls:
 
 - durable worker identity and short-lived task leases (v0.1 capability tokens authenticate a task packet, not a person or process);
 - content-addressed artifacts and sandboxed verification;
@@ -106,22 +107,31 @@ Treat worker output, evidence text, retrieved documents, URLs, and prompt conten
 
 v0.1 is intentionally a local single-operator kernel. SQLite transactions provide local atomicity, but no lease/heartbeat protocol exists. Distributed workers require explicit claiming, expiry, retries, idempotency, and stale-worker recovery before concurrency is enabled.
 
-## Worker protocol direction
+## Worker protocol
 
-A task packet contains only the minimum necessary context plus a bearer capability that the trusted gateway delivers to its assigned worker:
+The Runtime can emit a general external-worker packet containing minimum task context plus a short-lived bearer capability. The trusted `run-hermes` gateway does **not** pass that bearer to Hermes. It projects only the task scope and declares the actual enabled Hermes toolsets:
 
 ```json
 {
   "mission_id": "...",
   "task_id": "...",
+  "worker_id": "founder",
   "objective": "...",
-  "allowed_tools": [],
-  "budget": {"credits": 5, "time_seconds": 300},
+  "mission_context": {"title": "...", "brief": "...", "risk": "medium"},
+  "budget": {"credits": 8},
   "input_artifacts": [],
-  "acceptance_criteria": [],
+  "acceptance_criteria": ["..."],
   "evidence_contract": ["artifact", "verification", "summary"],
-  "capability_token": "short-lived HMAC token"
+  "decision_options": [],
+  "authority": {
+    "may_mutate_company_state": false,
+    "may_approve_own_work": false,
+    "may_trigger_external_side_effects": false
+  },
+  "enabled_toolsets": ["web"]
 }
 ```
 
-A worker returns an artifact proposal with the packet's token. It never chooses an actor identity or receives direct Runtime/SQLite access. The current CLI is a trusted gateway adapter, not a sandbox: operators must isolate the database and signing secret from worker processes. Tokens currently expire after five minutes but have no pre-expiry revocation list; completed task state prevents successful replay after completion.
+Hermes returns only an artifact proposal. The adapter accepts exactly non-empty `artifact`, `verification`, and `summary` strings plus an optional valid `decision`. The trusted CLI then submits that proposal with its retained capability. Hermes never chooses an actor identity and never receives Runtime/SQLite access or signing authority.
+
+The more general `mission packets` / `mission complete` path still exposes a bearer capability to a separately operated gateway. Those tokens expire after five minutes and have no pre-expiry revocation list; completed task state prevents successful replay after completion. Operators must isolate the database and signing secret from every worker process.

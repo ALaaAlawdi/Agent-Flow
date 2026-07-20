@@ -4,12 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-flow-company"
-version = "0.1.0"
-description = "Persistent runtime for an evidence-driven AI venture civilization"
+version = "0.2.0"
+description = "Deterministic company control plane with Hermes Agent AI workers"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 authors = [{name = "Agent-Flow Contributors"}]
-dependencies = []
+dependencies = [
+    "hermes-agent @ git+https://github.com/NousResearch/hermes-agent.git@main",
+]
 
 [project.scripts]
 agent-flow = "agent_flow.cli:main"

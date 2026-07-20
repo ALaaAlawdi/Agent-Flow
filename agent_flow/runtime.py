@@ -497,7 +497,7 @@ class CompanyRuntime:
             ).fetchall()
         return [dict(row) for row in rows]
 
-    def ready_task_packets(self, mission_id: str) -> list[dict]:
+    def ready_task_packets(self, mission_id: str, *, include_capability: bool = True) -> list[dict]:
         mission = self.mission(mission_id)
         tasks = {task["id"]: task for task in mission["tasks"]}
         packets = []
@@ -550,7 +550,7 @@ class CompanyRuntime:
                                 mission_id, task["id"], task["assigned_agent"]
                             )
                         }
-                        if self._capability_secret is not None
+                        if include_capability and self._capability_secret is not None
                         else {}
                     ),
                 }
