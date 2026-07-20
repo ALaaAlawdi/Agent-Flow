@@ -5,6 +5,8 @@ from .registry import DynamicAgentRegistry
 from .communication import AgentCommunication
 from .workflow import DynamicWorkflow
 from .environment import SharedEnvironment
+from .events import EventStore, EventType
+from .queue import TaskQueue, TaskPriority, TaskStatus, Task
 from .team import AgentTeam, TeamAgent
 
 __all__ = [
@@ -13,6 +15,12 @@ __all__ = [
     "AgentCommunication",
     "DynamicWorkflow",
     "SharedEnvironment",
+    "EventStore",
+    "EventType",
+    "TaskQueue",
+    "TaskPriority",
+    "TaskStatus",
+    "Task",
     "AgentTeam",
     "TeamAgent",
 ]

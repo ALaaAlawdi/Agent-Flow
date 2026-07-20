@@ -14,6 +14,8 @@ from .environment import SharedEnvironment
 from .communication import AgentCommunication
 from .registry import DynamicAgentRegistry
 from .factory import DynamicAgentFactory
+from .events import EventStore, EventType
+from .queue import TaskQueue, TaskPriority, TaskStatus
 
 
 class TeamAgent:
@@ -198,8 +200,17 @@ class AgentTeam:
         # Factory for creating agents
         self.factory = DynamicAgentFactory(name)
         
+        # Event tracking
+        self.events = EventStore(name)
+        
+        # Task queue
+        self.queue = TaskQueue(name)
+        
         # Team agents
         self.agents: dict[str, TeamAgent] = {}
+        
+        # Emit team created event
+        self.events.emit(EventType.TEAM_CREATED, {"name": name, "goal": goal})
     
     def add_agent(
         self,
@@ -246,6 +257,13 @@ class AgentTeam:
         # Register in environment
         self.environment.register_agent(agent_id, role, tools)
         
+        # Emit agent added event
+        self.events.emit(
+            EventType.AGENT_ADDED,
+            {"agent_id": agent_id, "role": role, "tools": tools},
+            agent_id
+        )
+        
         # Broadcast to other agents
         for other_id, other_agent in self.agents.items():
             if other_id != agent_id:
@@ -262,6 +280,7 @@ class AgentTeam:
         """Set or update team goal."""
         self.goal = goal
         self.environment.add_goal(goal)
+        self.events.emit(EventType.TEAM_GOAL_SET, {"goal": goal})
     
     def add_knowledge(self, key: str, value: Any):
         """Add shared knowledge."""
@@ -500,3 +519,55 @@ Original task: {task}
             "performance": perf,
             "suggestions": suggestions,
         }
+    
+    # ============== TASK QUEUE ==============
+    
+    def add_task(self, description: str, priority: TaskPriority = TaskPriority.NORMAL) -> Task:
+        """Add a task to the queue."""
+        task = self.queue.add(description, priority)
+        self.events.emit(EventType.TASK_STARTED, {
+            "task_id": task.id,
+            "description": description,
+            "priority": priority.value,
+        })
+        return task
+    
+    def get_next_task(self, agent_id: Optional[str] = None) -> Optional[Task]:
+        """Get next task for an agent."""
+        return self.queue.get_next(agent_id)
+    
+    def complete_task(self, task_id: str, result: str):
+        """Mark task as completed."""
+        task = self.queue.get(task_id)
+        if task:
+            task.complete(result)
+            self.queue.update(task)
+            self.events.emit(EventType.TASK_COMPLETED, {
+                "task_id": task_id,
+                "result": result[:200],
+            }, task.assigned_agent)
+    
+    def fail_task(self, task_id: str, error: str):
+        """Mark task as failed."""
+        task = self.queue.get(task_id)
+        if task:
+            task.fail(error)
+            self.queue.update(task)
+            self.events.emit(EventType.TASK_FAILED, {
+                "task_id": task_id,
+                "error": error[:200],
+            }, task.assigned_agent)
+    
+    def get_queue_stats(self) -> dict:
+        """Get task queue statistics."""
+        return self.queue.get_stats()
+    
+    # ============== EVENTS ==============
+    
+    def get_timeline(self, limit: int = 50) -> list[dict]:
+        """Get team timeline."""
+        return self.events.get_team_timeline(limit)
+    
+    def get_agent_history(self, agent_id: str, limit: int = 50) -> list[dict]:
+        """Get history for an agent."""
+        return self.events.get_agent_history(agent_id, limit)

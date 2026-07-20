@@ -81,6 +81,18 @@ class BroadcastRequest(BaseModel):
     to_roles: Optional[list[str]] = None
 
 
+class AddQueueTaskRequest(BaseModel):
+    """Request to add a task to queue."""
+    description: str
+    priority: int = 5  # 1=low, 5=normal, 10=high, 20=urgent
+
+
+class CompleteTaskRequest(BaseModel):
+    """Request to complete a task."""
+    task_id: str
+    result: str
+
+
 # ============== TEAM ROUTES ==============
 
 @app.post("/teams", response_model=dict)
@@ -311,6 +323,97 @@ async def get_improvement(team_name: str, agent_id: str):
         raise HTTPException(status_code=404, detail="Team not found")
     
     return teams[team_name].improve_agent(agent_id)
+
+
+# ============== TASK QUEUE ROUTES ==============
+
+@app.post("/teams/{team_name}/queue/tasks", response_model=dict)
+async def add_queue_task(team_name: str, request: AddQueueTaskRequest):
+    """Add a task to the queue."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    from agent_flow.agents import TaskPriority
+    priority = TaskPriority(request.priority)
+    task = teams[team_name].add_task(request.description, priority)
+    
+    return {
+        "status": "added",
+        "task_id": task.id,
+        "description": task.description,
+        "priority": task.priority.value,
+    }
+
+
+@app.get("/teams/{team_name}/queue/tasks", response_model=dict)
+async def list_queue_tasks(team_name: str, status: Optional[str] = None):
+    """List tasks in the queue."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    team = teams[team_name]
+    tasks = team.queue.get_all()
+    
+    if status:
+        from agent_flow.agents import TaskStatus
+        tasks = [t for t in tasks if t.status == TaskStatus(status)]
+    
+    return {
+        "tasks": [t.to_dict() for t in tasks],
+        "count": len(tasks),
+    }
+
+
+@app.get("/teams/{team_name}/queue/tasks/next", response_model=dict)
+async def get_next_task(team_name: str, agent_id: Optional[str] = None):
+    """Get next task for an agent."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    task = teams[team_name].get_next_task(agent_id)
+    if not task:
+        return {"task": None, "message": "No pending tasks"}
+    
+    return {"task": task.to_dict()}
+
+
+@app.post("/teams/{team_name}/queue/tasks/{task_id}/complete", response_model=dict)
+async def complete_task(team_name: str, task_id: str, request: CompleteTaskRequest):
+    """Mark a task as completed."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    teams[team_name].complete_task(task_id, request.result)
+    return {"status": "completed", "task_id": task_id}
+
+
+@app.get("/teams/{team_name}/queue/stats", response_model=dict)
+async def get_queue_stats(team_name: str):
+    """Get queue statistics."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_queue_stats()
+
+
+# ============== EVENT ROUTES ==============
+
+@app.get("/teams/{team_name}/timeline", response_model=dict)
+async def get_timeline(team_name: str, limit: int = 50):
+    """Get team timeline."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"timeline": teams[team_name].get_timeline(limit)}
+
+
+@app.get("/teams/{team_name}/agents/{agent_id}/history", response_model=dict)
+async def get_agent_history(team_name: str, agent_id: str, limit: int = 50):
+    """Get agent history."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"history": teams[team_name].get_agent_history(agent_id, limit)}
 
 
 # ============== STATUS ROUTES ==============
