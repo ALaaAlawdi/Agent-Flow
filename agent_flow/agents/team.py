@@ -15,8 +15,9 @@ from .communication import AgentCommunication
 from .registry import DynamicAgentRegistry
 from .factory import DynamicAgentFactory
 from .events import EventStore, EventType
-from .queue import TaskQueue, TaskPriority, TaskStatus
+from .queue import TaskQueue, TaskPriority, TaskStatus, Task
 from .workflow_engine import WorkflowEngine
+from .hub import SmartAgentHub
 
 
 class TeamAgent:
@@ -210,6 +211,9 @@ class AgentTeam:
         # Workflow engine
         self.workflow_engine = WorkflowEngine(self)
         
+        # Smart Agent Hub for intelligent coordination
+        self.hub = SmartAgentHub(name)
+        
         # Team agents
         self.agents: dict[str, TeamAgent] = {}
         
@@ -260,6 +264,9 @@ class AgentTeam:
         
         # Register in environment
         self.environment.register_agent(agent_id, role, tools)
+        
+        # Register in Smart Hub for intelligent coordination
+        self.hub.register_agent(agent_id, role, tools, system_prompt)
         
         # Emit agent added event
         self.events.emit(
@@ -575,3 +582,123 @@ Original task: {task}
     def get_agent_history(self, agent_id: str, limit: int = 50) -> list[dict]:
         """Get history for an agent."""
         return self.events.get_agent_history(agent_id, limit)
+    
+    # ============== SMART HUB ==============
+    
+    def find_best_agent(self, task: str) -> Optional[dict]:
+        """Find the best agent for a task using smart routing."""
+        profile = self.hub.find_best_agent(task)
+        if profile:
+            return profile.to_dict()
+        return None
+    
+    def find_team_for_task(self, task: str, max_agents: int = 3) -> list[dict]:
+        """Find a team of agents for a task."""
+        profiles = self.hub.find_agents_for_task(task, max_agents)
+        return [p.to_dict() for p in profiles]
+    
+    def decompose_goal(self, goal: str) -> list[dict]:
+        """Automatically decompose a goal into tasks."""
+        tasks = self.hub.decompose_goal(goal)
+        self.events.emit(EventType.GOAL_DECOMPOSED, {
+            "goal": goal,
+            "tasks": len(tasks),
+        })
+        return tasks
+    
+    def request_help(self, from_agent: str, task: str, description: str) -> list[dict]:
+        """Request help from other agents."""
+        profiles = self.hub.request_help(from_agent, task, description)
+        return [p.to_dict() for p in profiles]
+    
+    def get_hub_status(self) -> dict:
+        """Get smart hub status."""
+        return self.hub.get_team_status()
+    
+    def get_capabilities_map(self) -> dict:
+        """Get capabilities map of the team."""
+        return self.hub.get_capabilities_map()
+    
+    # ============== AUTONOMOUS EXECUTION ==============
+    
+    async def execute_autonomously(
+        self,
+        goal: str,
+        max_iterations: int = 10,
+    ) -> dict[str, Any]:
+        """Execute towards a goal autonomously.
+        
+        The team will:
+        1. Decompose the goal into tasks
+        2. Route each task to the best agent
+        3. Monitor progress and request help if needed
+        4. Iterate until goal is achieved or max iterations
+        """
+        results = {
+            "goal": goal,
+            "iterations": 0,
+            "tasks_completed": [],
+            "tasks_failed": [],
+            "final_result": None,
+        }
+        
+        # Decompose goal
+        tasks = self.decompose_goal(goal)
+        results["decomposed_tasks"] = tasks
+        
+        for iteration in range(max_iterations):
+            results["iterations"] = iteration + 1
+            
+            # Find tasks that need doing
+            pending_tasks = [
+                t for t in tasks 
+                if t["description"] not in results["tasks_completed"]
+                and t["description"] not in results["tasks_failed"]
+            ]
+            
+            if not pending_tasks:
+                break
+            
+            # Get next task
+            task = pending_tasks[0]
+            
+            # Find best agent for this task
+            best_agent = self.find_best_agent(task["description"])
+            
+            if not best_agent:
+                results["tasks_failed"].append(task["description"])
+                continue
+            
+            # Execute task
+            agent_id = best_agent["id"]
+            if agent_id in self.agents:
+                try:
+                    agent = self.agents[agent_id]
+                    result = agent.hermes_agent.chat(task["description"])
+                    
+                    results["tasks_completed"].append({
+                        "task": task["description"],
+                        "agent": agent_id,
+                        "result": str(result)[:500],
+                    })
+                    
+                    # Add to shared knowledge
+                    self.add_knowledge(f"task_{iteration}", str(result)[:500])
+                    
+                except Exception as e:
+                    results["tasks_failed"].append({
+                        "task": task["description"],
+                        "error": str(e),
+                    })
+                    
+                    # Request help
+                    helpers = self.request_help(agent_id, task["description"], str(e))
+        
+        # Set final result
+        results["final_result"] = {
+            "completed": len(results["tasks_completed"]),
+            "failed": len(results["tasks_failed"]),
+            "knowledge": self.environment.list_knowledge(),
+        }
+        
+        return results

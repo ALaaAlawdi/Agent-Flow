@@ -44,6 +44,14 @@ class EventType(str, Enum):
     WORKFLOW_STEP_STARTED = "workflow_step_started"
     WORKFLOW_STEP_COMPLETED = "workflow_step_completed"
     WORKFLOW_STEP_FAILED = "workflow_step_failed"
+    
+    # Hub events
+    AGENT_REGISTERED = "agent_registered"
+    AGENT_UNREGISTERED = "agent_unregistered"
+    TASK_ROUTED = "task_routed"
+    HELP_REQUESTED = "help_requested"
+    HELP_OFFERED = "help_offered"
+    GOAL_DECOMPOSED = "goal_decomposed"
 
 
 class Event:

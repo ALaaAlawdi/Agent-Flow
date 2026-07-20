@@ -539,6 +539,96 @@ async def get_template(template_id: str):
     return template
 
 
+# ============== SMART HUB ROUTES ==============
+
+@app.get("/teams/{team_name}/hub/status", response_model=dict)
+async def get_hub_status(team_name: str):
+    """Get smart hub status."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_hub_status()
+
+
+@app.get("/teams/{team_name}/hub/capabilities", response_model=dict)
+async def get_capabilities_map(team_name: str):
+    """Get capabilities map."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"capabilities": teams[team_name].get_capabilities_map()}
+
+
+@app.get("/teams/{team_name}/hub/best-agent", response_model=dict)
+async def find_best_agent(team_name: str, task: str):
+    """Find best agent for a task."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"agent": teams[team_name].find_best_agent(task)}
+
+
+@app.get("/teams/{team_name}/hub/team-for-task", response_model=dict)
+async def find_team_for_task(team_name: str, task: str, max_agents: int = 3):
+    """Find a team of agents for a task."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"agents": teams[team_name].find_team_for_task(task, max_agents)}
+
+
+@app.post("/teams/{team_name}/hub/decompose", response_model=dict)
+async def decompose_goal(team_name: str, goal: str):
+    """Decompose a goal into tasks."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"tasks": teams[team_name].decompose_goal(goal)}
+
+
+class RequestHelpRequest(BaseModel):
+    """Request help."""
+    from_agent: str
+    task: str
+    description: str
+
+
+@app.post("/teams/{team_name}/hub/help", response_model=dict)
+async def request_help(team_name: str, request: RequestHelpRequest):
+    """Request help from other agents."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    helpers = teams[team_name].request_help(
+        request.from_agent,
+        request.task,
+        request.description,
+    )
+    return {"helpers": helpers}
+
+
+# ============== AUTONOMOUS EXECUTION ROUTES ==============
+
+class ExecuteAutonomousRequest(BaseModel):
+    """Execute autonomously."""
+    goal: str
+    max_iterations: int = 10
+
+
+@app.post("/teams/{team_name}/autonomous", response_model=dict)
+async def execute_autonomous(team_name: str, request: ExecuteAutonomousRequest):
+    """Execute goal autonomously."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    import asyncio
+    result = await teams[team_name].execute_autonomously(
+        request.goal,
+        request.max_iterations,
+    )
+    return result
+
+
 # ============== STATUS ROUTES ==============
 
 @app.get("/status", response_model=dict)

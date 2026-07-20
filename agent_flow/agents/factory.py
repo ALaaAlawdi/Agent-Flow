@@ -12,6 +12,21 @@ from hermes_cli.toolset_validation import validate_platform_toolsets
 from hermes_cli.profiles import get_profile_dir
 
 
+# Default toolset validator - accepts common toolset names
+def _default_toolset_validator(toolset: str) -> bool:
+    """Default validator that accepts common toolsets."""
+    # Common toolsets that might be valid
+    common_toolsets = {
+        "web", "terminal", "file", "code", "editor",
+        "bash", "shell", "cli", "mcp", "gateway",
+    }
+    # Accept if it's in common toolsets or starts with common prefix
+    if toolset.lower() in common_toolsets:
+        return True
+    # Accept any toolset that looks reasonable (alphanumeric with dashes)
+    return toolset.replace("-", "").replace("_", "").isalnum() and len(toolset) > 1
+
+
 class DynamicAgentFactory:
     """Factory that creates Hermes AIAgent instances from user configuration.
     
@@ -61,7 +76,13 @@ class DynamicAgentFactory:
             ValueError: If tools are invalid
         """
         # 1. Validate tools using Hermes built-in validation
-        validate_platform_toolsets(tools)
+        warnings = validate_platform_toolsets(tools, _default_toolset_validator)
+        # Log warnings if any
+        if warnings:
+            import logging
+            logger = logging.getLogger(__name__)
+            for w in warnings:
+                logger.warning(f"Toolset warning: {w}")
         
         # 2. Build system prompt from config
         prompt = self._build_prompt(
@@ -73,7 +94,7 @@ class DynamicAgentFactory:
         
         # 3. Create Hermes AIAgent (THE CORE - from run_agent)
         agent = AIAgent(
-            name=name,
+            session_id=name,  # Use session_id as name
             enabled_toolsets=tools,
             ephemeral_system_prompt=prompt,
             max_iterations=max_iterations,

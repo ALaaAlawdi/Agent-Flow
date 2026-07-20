@@ -7,9 +7,10 @@ from .workflow import DynamicWorkflow
 from .workflow_engine import Workflow, WorkflowEngine, WorkflowStatus
 from .environment import SharedEnvironment
 from .events import EventStore, EventType
-from .queue import TaskQueue, TaskPriority, TaskStatus, Task
+from .queue import TaskQueue, TaskPriority, TaskStatus
 from .team import AgentTeam, TeamAgent
 from .templates import AGENT_TEMPLATES, get_template, list_templates
+from .hub import SmartAgentHub, AgentProfile, Capability
 
 __all__ = [
     # Core
@@ -29,7 +30,6 @@ __all__ = [
     "TaskQueue",
     "TaskPriority",
     "TaskStatus",
-    "Task",
     # Team
     "AgentTeam",
     "TeamAgent",
@@ -37,4 +37,8 @@ __all__ = [
     "AGENT_TEMPLATES",
     "get_template",
     "list_templates",
+    # Hub (Smart Coordination)
+    "SmartAgentHub",
+    "AgentProfile",
+    "Capability",
 ]
