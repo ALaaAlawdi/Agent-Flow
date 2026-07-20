@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.db
+*.db-shm
+*.db-wal
+.venv/
+dist/
+build/
+*.egg-info/
+.agent-flow/
+demo-artifacts/
