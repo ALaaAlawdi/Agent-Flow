@@ -62,6 +62,7 @@ from .interactions import (
     AgentConversation, ConversationManager
 )
 from .persistence import PersistenceManager, AutoPersistence
+from .demo_scenarios import SCENARIOS, DemoRunner, DemoScenario
 
 __all__ = [
     # Core
@@ -197,4 +198,8 @@ __all__ = [
     # Persistence
     "PersistenceManager",
     "AutoPersistence",
+    # Demo Scenarios
+    "SCENARIOS",
+    "DemoRunner",
+    "DemoScenario",
 ]

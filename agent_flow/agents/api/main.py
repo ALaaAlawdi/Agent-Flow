@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from agent_flow.agents import AgentTeam
+from agent_flow.agents import AgentTeam, DemoRunner, SCENARIOS
 from hermes_cli.toolset_validation import validate_platform_toolsets
 
 
@@ -1369,6 +1369,47 @@ async def list_all_teams():
     return {"teams": first_team.persistence.list_teams()}
 
 
+# ============== DEMO SCENARIOS ROUTES ==============
+
+@app.get("/scenarios", response_model=dict)
+async def list_scenarios():
+    """List all available demo scenarios.
+    
+    Each scenario pre-fills a team with agents and runs them
+    through a realistic workflow. Perfect for UI demos.
+    """
+    return {
+        "scenarios": DemoRunner.list_scenarios(),
+    }
+
+
+@app.get("/scenarios/{scenario_id}", response_model=dict)
+async def get_scenario(scenario_id: str):
+    """Get details of a specific scenario."""
+    scenario = DemoRunner.get_scenario(scenario_id)
+    if not scenario:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    
+    return {
+        **scenario.to_dict(),
+        "team_config": scenario.team_config,
+        "steps": scenario.run_steps,
+    }
+
+
+@app.post("/scenarios/{scenario_id}/run", response_model=dict)
+async def run_scenario(scenario_id: str):
+    """Run a demo scenario - pre-fills team, agents, and executes steps.
+    
+    Returns a summary with:
+    - Number of agents added
+    - Steps executed
+    - Final stats
+    """
+    result = await DemoRunner.run_scenario(scenario_id, teams)
+    return result
+
+
 # ============== MODELS ROUTES ==============
 
 @app.get("/models", response_model=dict)
@@ -1418,14 +1459,31 @@ async def root():
     """Root endpoint with API info."""
     return {
         "name": "Agent-Flow Team API",
-        "version": "0.2.0",
-        "description": "Collaborative multi-agent teams powered by Hermes",
+        "version": "0.3.0",
+        "description": "Collaborative multi-agent teams powered by Hermes + OpenAI",
         "docs": "/docs",
+        "demo_ui": "/demo",
+        "scenarios": "/scenarios",
+        "models": "/models",
         "features": [
             "Dynamic agent creation - no hardcoded agents",
-            "Shared environment - agents work in same workspace",
-            "Inter-agent communication - agents can message each other",
-            "Goal-oriented execution - team works towards common goal",
-            "Learning system - agents improve over time",
+            "21 cognitive capabilities (superhuman AI)",
+            "OpenAI models by default (gpt-4o-mini)",
+            "Real-time interaction tracking",
+            "Pre-built demo scenarios (one-click)",
+            "Persistent history (survives restart)",
+            "WebSocket live updates",
         ],
     }
+
+
+@app.get("/demo")
+async def demo_ui():
+    """Serve the demo HTML page."""
+    from fastapi.responses import HTMLResponse
+    from pathlib import Path
+    
+    demo_path = Path(__file__).parent.parent.parent.parent / "demo.html"
+    if demo_path.exists():
+        return HTMLResponse(content=demo_path.read_text(encoding="utf-8"))
+    return HTMLResponse(content="<h1>Demo file not found</h1>", status_code=404)
