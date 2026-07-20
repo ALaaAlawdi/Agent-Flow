@@ -1,4 +1,17 @@
-# Architecture
+### Direct Python Imports
+
+The adapter now imports directly from the vendored Hermes package:
+
+```python
+from agent_flow.hermes import HermesWorkerAdapter, HermesExecutionError
+
+# Direct access to Hermes internals
+from hermes_cli.main import main as hermes_main
+from hermes_cli.profiles import list_profiles, get_active_profile_name
+from hermes_cli.toolset_validation import validate_platform_toolsets
+```
+
+### Architecture
 
 ## Core boundary
 

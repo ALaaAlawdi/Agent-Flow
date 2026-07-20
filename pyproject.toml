@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.14"
 authors = [{name = "Agent-Flow Contributors"}]
 dependencies = [
-    "hermes-agent>=0.18.2",
+    "hermes-agent @ git+https://github.com/NousResearch/hermes-agent.git@main",
 ]
 
 [project.scripts]

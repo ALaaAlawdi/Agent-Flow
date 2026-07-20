@@ -9,6 +9,11 @@ import subprocess
 from pathlib import Path
 from typing import Mapping
 
+# Direct imports from vendored hermes_cli package
+from hermes_cli.main import main as hermes_main
+from hermes_cli.profiles import list_profiles, get_active_profile_name
+from hermes_cli.toolset_validation import validate_platform_toolsets
+
 
 class HermesExecutionError(RuntimeError):
     """Raised when a Hermes worker cannot produce a valid evidence proposal."""
