@@ -1,9 +1,13 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import Mock, patch
+
+from agent_flow import cli
 
 
 class CliTests(unittest.TestCase):
@@ -33,12 +37,13 @@ class CliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "workers.db"
             root = Path(__file__).resolve().parents[1]
+            env = {**os.environ, "AGENT_FLOW_CAPABILITY_SECRET": "test-secret-with-sufficient-entropy"}
             create = subprocess.run(
                 [
                     sys.executable, "-m", "agent_flow.cli", "--db", str(db),
                     "mission", "create", "--title", "Worker Co", "--brief", "External workers", "--budget", "120",
                 ],
-                cwd=root, check=False, capture_output=True, text=True,
+                cwd=root, check=False, capture_output=True, text=True, env=env,
             )
             self.assertEqual(create.returncode, 0, create.stderr)
             created = json.loads(create.stdout)
@@ -46,21 +51,68 @@ class CliTests(unittest.TestCase):
 
             packets = subprocess.run(
                 [sys.executable, "-m", "agent_flow.cli", "--db", str(db), "mission", "packets", mission_id],
-                cwd=root, check=False, capture_output=True, text=True,
+                cwd=root, check=False, capture_output=True, text=True, env=env,
             )
             self.assertEqual(packets.returncode, 0, packets.stderr)
-            self.assertEqual(len(json.loads(packets.stdout)), 4)
+            packet_list = json.loads(packets.stdout)
+            self.assertEqual(len(packet_list), 4)
+            token = next(
+                packet["capability_token"] for packet in packet_list
+                if packet["task_id"] == "mission_thesis"
+            )
 
             completed = subprocess.run(
                 [
                     sys.executable, "-m", "agent_flow.cli", "--db", str(db), "mission", "complete",
-                    mission_id, "mission_thesis", "--actor", created["assignments"]["mission_thesis"],
+                    mission_id, "mission_thesis",
                     "--artifact", "artifacts/thesis.md", "--verification", "checked", "--summary", "bounded thesis",
                 ],
-                cwd=root, check=False, capture_output=True, text=True,
+                cwd=root, check=False, capture_output=True, text=True, env=env, input=token,
             )
             self.assertEqual(completed.returncode, 0, completed.stderr)
             self.assertEqual(json.loads(completed.stdout)["status"], "done")
+
+    def test_cli_worker_commands_require_capability_secret(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = dict(os.environ)
+            env.pop("AGENT_FLOW_CAPABILITY_SECRET", None)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "agent_flow.cli",
+                    "--db",
+                    str(Path(tmp) / "workers.db"),
+                    "mission",
+                    "packets",
+                    "mission-id",
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("AGENT_FLOW_CAPABILITY_SECRET", result.stderr)
+
+    def test_cli_bounds_capability_stdin_read(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bounded_stdin = Mock()
+            bounded_stdin.read.return_value = "a" * 4097
+            argv = [
+                "--db", str(Path(tmp) / "workers.db"), "mission", "complete", "mission", "task",
+                "--artifact", "artifact", "--verification", "checked", "--summary", "bounded",
+            ]
+            with (
+                patch.object(cli.sys, "stdin", bounded_stdin),
+                patch.dict(os.environ, {"AGENT_FLOW_CAPABILITY_SECRET": "test-secret-with-sufficient-entropy"}),
+                self.assertRaises(SystemExit),
+            ):
+                cli.main(argv)
+
+            bounded_stdin.read.assert_called_once_with(4097)
 
 
 if __name__ == "__main__":
