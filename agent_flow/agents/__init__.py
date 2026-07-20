@@ -16,6 +16,16 @@ from .learning import AgentLearning, TeamLearning, LearningMetric
 from .planning import Plan, PlanningEngine
 from .decisions import Decision, DecisionEngine, AdaptiveRouter
 from .negotiation import NegotiationOffer, Negotiation, NegotiationEngine, ConflictResolver
+from .hermes_integration import (
+    HERMES_AVAILABLE,
+    HermesGoalWrapper,
+    HermesDecomposer,
+    HermesMoA,
+    HermesCheckpoints,
+    HermesActiveSessions,
+    HermesSkills,
+    AIAgentAdvanced,
+)
 
 __all__ = [
     # Core
@@ -66,4 +76,13 @@ __all__ = [
     "Negotiation",
     "NegotiationEngine",
     "ConflictResolver",
+    # Hermes Integration
+    "HERMES_AVAILABLE",
+    "HermesGoalWrapper",
+    "HermesDecomposer",
+    "HermesMoA",
+    "HermesCheckpoints",
+    "HermesActiveSessions",
+    "HermesSkills",
+    "AIAgentAdvanced",
 ]

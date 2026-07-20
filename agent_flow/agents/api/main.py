@@ -913,6 +913,193 @@ async def get_negotiation_stats(team_name: str):
     return teams[team_name].get_negotiation_statistics()
 
 
+# ============== HERMES DEEP INTEGRATION ROUTES ==============
+
+class GoalContractRequest(BaseModel):
+    """Goal with Hermes contract."""
+    goal: str
+    outcome: str
+    verification: str
+    constraints: str = ""
+    boundaries: str = ""
+    stop_when: str = ""
+
+
+@app.post("/teams/{team_name}/hermes/goal", response_model=dict)
+async def set_goal_contract(team_name: str, request: GoalContractRequest):
+    """Set a structured goal with Hermes contract."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].set_goal_contract(
+        request.goal,
+        request.outcome,
+        request.verification,
+        request.constraints,
+        request.boundaries,
+        request.stop_when,
+    )
+
+
+class SubgoalRequest(BaseModel):
+    """Subgoal."""
+    subgoal: str
+
+
+@app.post("/teams/{team_name}/hermes/subgoal", response_model=dict)
+async def add_subgoal(team_name: str, request: SubgoalRequest):
+    """Add a subgoal."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].add_subgoal(request.subgoal)
+
+
+@app.get("/teams/{team_name}/hermes/goal/status", response_model=dict)
+async def get_goal_status(team_name: str):
+    """Get goal status."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_goal_status()
+
+
+class PauseGoalRequest(BaseModel):
+    """Pause goal."""
+    reason: str = ""
+
+
+@app.post("/teams/{team_name}/hermes/goal/pause", response_model=dict)
+async def pause_goal(team_name: str, request: PauseGoalRequest):
+    """Pause the current goal."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].pause_goal(request.reason)
+
+
+@app.post("/teams/{team_name}/hermes/goal/resume", response_model=dict)
+async def resume_goal(team_name: str):
+    """Resume paused goal."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].resume_goal()
+
+
+class DecomposeRequest(BaseModel):
+    """Decompose task."""
+    task_id: str
+    author: Optional[str] = None
+
+
+@app.post("/teams/{team_name}/hermes/decompose", response_model=dict)
+async def decompose_task(team_name: str, request: DecomposeRequest):
+    """Decompose a task using Hermes."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].decompose_task_hermes(request.task_id, request.author)
+
+
+@app.get("/teams/{team_name}/hermes/moa/presets", response_model=dict)
+async def list_moa_presets(team_name: str):
+    """List MoA presets."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"presets": teams[team_name].list_moa_presets()}
+
+
+@app.get("/teams/{team_name}/hermes/moa/preset/{name}", response_model=dict)
+async def resolve_moa_preset(team_name: str, name: str):
+    """Resolve MoA preset."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].resolve_moa_preset(name)
+
+
+@app.get("/teams/{team_name}/hermes/moa/consensus", response_model=dict)
+async def build_consensus_prompt(team_name: str, question: str, model_count: int = 3):
+    """Build consensus prompt."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    prompt = teams[team_name].build_consensus_prompt(question, model_count)
+    return {"prompt": prompt}
+
+
+@app.get("/teams/{team_name}/hermes/checkpoints", response_model=dict)
+async def list_checkpoints(team_name: str):
+    """List checkpoints."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"checkpoints": teams[team_name].list_checkpoints()}
+
+
+@app.get("/teams/{team_name}/hermes/checkpoints/status", response_model=dict)
+async def get_checkpoint_status(team_name: str):
+    """Get checkpoint status."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_checkpoint_status()
+
+
+class SessionAcquireRequest(BaseModel):
+    """Session acquire."""
+    session_id: str
+
+
+@app.post("/teams/{team_name}/hermes/sessions/acquire", response_model=dict)
+async def acquire_session(team_name: str, request: SessionAcquireRequest):
+    """Acquire session slot."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    acquired = teams[team_name].acquire_session(request.session_id)
+    return {"acquired": acquired}
+
+
+@app.post("/teams/{team_name}/hermes/sessions/release", response_model=dict)
+async def release_session(team_name: str, request: SessionAcquireRequest):
+    """Release session slot."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    teams[team_name].release_session(request.session_id)
+    return {"released": True}
+
+
+@app.get("/teams/{team_name}/hermes/sessions/snapshot", response_model=dict)
+async def get_sessions_snapshot(team_name: str):
+    """Get active sessions snapshot."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_active_sessions_snapshot()
+
+
+@app.get("/teams/{team_name}/hermes/skills", response_model=dict)
+async def discover_skills(team_name: str):
+    """Discover Hermes skills."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return {"skills": teams[team_name].discover_skills()}
+
+
+@app.get("/teams/{team_name}/hermes/status", response_model=dict)
+async def get_hermes_status(team_name: str):
+    """Get Hermes integration status."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    return teams[team_name].get_hermes_status()
+
+
 # ============== STATUS ROUTES ==============
 
 @app.get("/status", response_model=dict)

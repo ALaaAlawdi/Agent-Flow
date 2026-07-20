@@ -23,6 +23,16 @@ from .learning import TeamLearning
 from .planning import PlanningEngine
 from .decisions import DecisionEngine, AdaptiveRouter
 from .negotiation import NegotiationEngine, ConflictResolver
+from .hermes_integration import (
+    HERMES_AVAILABLE,
+    HermesGoalWrapper,
+    HermesDecomposer,
+    HermesMoA,
+    HermesCheckpoints,
+    HermesActiveSessions,
+    HermesSkills,
+    AIAgentAdvanced,
+)
 
 
 class TeamAgent:
@@ -235,6 +245,23 @@ class AgentTeam:
         # Negotiation engine for agent interactions
         self.negotiator = NegotiationEngine()
         self.conflict_resolver = ConflictResolver()
+        
+        # Hermes integration - structured goals and contracts
+        self.goal_wrapper: Optional[HermesGoalWrapper] = None
+        if HERMES_AVAILABLE:
+            try:
+                self.goal_wrapper = HermesGoalWrapper(session_id=f"team_{name}")
+            except Exception:
+                pass
+        
+        # Hermes checkpoints for state recovery
+        self.checkpoints = HermesCheckpoints()
+        
+        # Hermes active sessions management
+        self.session_manager = HermesActiveSessions()
+        
+        # Skills integration
+        self.skills = HermesSkills()
         
         # Team agents
         self.agents: dict[str, TeamAgent] = {}
@@ -883,3 +910,118 @@ Original task: {task}
     def get_negotiation_statistics(self) -> dict:
         """Get negotiation statistics."""
         return self.negotiator.get_statistics()
+    
+    # ============== HERMES DEEP INTEGRATION ==============
+    
+    def set_goal_contract(
+        self,
+        goal: str,
+        outcome: str,
+        verification: str,
+        constraints: str = "",
+        boundaries: str = "",
+        stop_when: str = "",
+    ) -> dict:
+        """Set a structured goal with Hermes contract.
+        
+        This uses Hermes GoalManager to track goals with:
+        - Outcome: What success looks like
+        - Verification: How to verify success
+        - Constraints: Hard rules to follow
+        - Boundaries: Things to avoid
+        - Stop conditions: When to stop trying
+        """
+        if not self.goal_wrapper:
+            return {"error": "Hermes not available"}
+        
+        return self.goal_wrapper.set_goal_with_contract(
+            goal=goal,
+            outcome=outcome,
+            verification=verification,
+            constraints=constraints,
+            boundaries=boundaries,
+            stop_when=stop_when,
+        )
+    
+    def add_subgoal(self, subgoal: str) -> dict:
+        """Add a subgoal to the current main goal."""
+        if not self.goal_wrapper:
+            return {"error": "Hermes not available"}
+        self.goal_wrapper.add_subgoal(subgoal)
+        return {"status": "added", "subgoal": subgoal}
+    
+    def get_goal_status(self) -> dict:
+        """Get current goal status."""
+        if not self.goal_wrapper:
+            return {"error": "Hermes not available"}
+        return self.goal_wrapper.get_state()
+    
+    def pause_goal(self, reason: str = "") -> dict:
+        """Pause the current goal."""
+        if not self.goal_wrapper:
+            return {"error": "Hermes not available"}
+        self.goal_wrapper.pause(reason)
+        return {"status": "paused", "reason": reason}
+    
+    def resume_goal(self) -> dict:
+        """Resume the paused goal."""
+        if not self.goal_wrapper:
+            return {"error": "Hermes not available"}
+        self.goal_wrapper.resume()
+        return {"status": "resumed"}
+    
+    def decompose_task_hermes(self, task_id: str, author: Optional[str] = None) -> dict:
+        """Decompose a task using Hermes kanban decomposer."""
+        return HermesDecomposer.decompose(task_id, author)
+    
+    def list_moa_presets(self) -> list[str]:
+        """List available MoA (Mixture of Agents) presets."""
+        return HermesMoA.list_presets()
+    
+    def resolve_moa_preset(self, name: str) -> dict:
+        """Resolve an MoA preset configuration."""
+        return HermesMoA.resolve_preset(name)
+    
+    def build_consensus_prompt(self, question: str, model_count: int = 3) -> str:
+        """Build a multi-agent consensus prompt."""
+        return HermesMoA.build_consensus_prompt(question, model_count)
+    
+    def list_checkpoints(self) -> list[dict]:
+        """List available state checkpoints."""
+        return self.checkpoints.list_checkpoints()
+    
+    def get_checkpoint_status(self) -> dict:
+        """Get checkpoint subsystem status."""
+        return self.checkpoints.status()
+    
+    def acquire_session(self, session_id: str) -> bool:
+        """Acquire an active session slot."""
+        return self.session_manager.try_acquire(session_id)
+    
+    def release_session(self, session_id: str) -> None:
+        """Release an active session slot."""
+        self.session_manager.release(session_id)
+    
+    def get_active_sessions_snapshot(self) -> dict:
+        """Get current active sessions snapshot."""
+        return self.session_manager.snapshot()
+    
+    def get_max_concurrent_sessions(self) -> int:
+        """Get max concurrent sessions limit."""
+        return self.session_manager.max_concurrent()
+    
+    def discover_skills(self) -> list[dict]:
+        """Discover available Hermes skills."""
+        return self.skills.discover()
+    
+    def get_hermes_status(self) -> dict:
+        """Get overall Hermes integration status."""
+        return {
+            "hermes_available": HERMES_AVAILABLE,
+            "goal_wrapper_active": self.goal_wrapper is not None,
+            "checkpoints_count": len(self.checkpoints.list_checkpoints()),
+            "max_concurrent_sessions": self.session_manager.max_concurrent(),
+            "skills_available": self.skills.is_available(),
+            "moa_presets_count": len(self.list_moa_presets()),
+            "aiagent_capabilities": AIAgentAdvanced.get_capabilities(),
+        }
