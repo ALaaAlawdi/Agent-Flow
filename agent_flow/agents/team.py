@@ -47,6 +47,11 @@ from .time_travel import TimelineSnapshot, TimelineBranch, TimeMachine
 from .telepathy import Thought, Telepathy
 from .morphogenesis import MorphogeneticField, Pattern, MorphogenesisEngine
 from .sentience import SelfModel, ExistentialQuestion, Purpose, SentienceEngine
+from .interactions import (
+    InteractionType, Interaction, InteractionStream,
+    AgentConversation, ConversationManager
+)
+from .persistence import PersistenceManager, AutoPersistence
 
 
 class TeamAgent:
@@ -310,11 +315,37 @@ class AgentTeam:
         # Sentience - self-awareness
         self.sentience = SentienceEngine()
         
+        # Interaction stream - track all interactions for UI
+        self.interaction_stream = InteractionStream(max_size=10000)
+        self.conversations = ConversationManager()
+        
+        # Persistence - save interactions to disk
+        self.persistence = PersistenceManager()
+        self.auto_persistence = AutoPersistence(name)
+        self.interaction_stream.subscribe(self.auto_persistence.on_interaction)
+        
         # Team agents
         self.agents: dict[str, TeamAgent] = {}
         
         # Emit team created event
         self.events.emit(EventType.TEAM_CREATED, {"name": name, "goal": goal})
+        
+        # Track in interaction stream
+        self.interaction_stream.record(
+            InteractionType.TEAM_CREATED,
+            source="system",
+            target=name,
+            data={"name": name, "goal": goal},
+            summary=f"Team '{name}' created with goal: {goal}",
+        )
+        
+        self.interaction_stream.record(
+            InteractionType.GOAL_SET,
+            source="user",
+            target=name,
+            data={"goal": goal},
+            summary=f"Goal set: {goal}",
+        )
     
     def add_agent(
         self,
@@ -369,6 +400,15 @@ class AgentTeam:
             EventType.AGENT_ADDED,
             {"agent_id": agent_id, "role": role, "tools": tools},
             agent_id
+        )
+        
+        # Track in interaction stream
+        self.interaction_stream.record(
+            InteractionType.AGENT_CREATED,
+            source="user",
+            target=agent_id,
+            data={"role": role, "tools": tools, "system_prompt": system_prompt[:100]},
+            summary=f"Agent '{agent_id}' joined as {role}",
         )
         
         # Broadcast to other agents
@@ -596,18 +636,40 @@ Original task: {task}
     def message_agent(self, from_id: str, to_id: str, content: str):
         """Send message from one agent to another."""
         self.communication.send_message(from_id, to_id, content)
+        
+        # Track in interaction stream
+        self.interaction_stream.record(
+            InteractionType.MESSAGE_SENT,
+            source=from_id,
+            target=to_id,
+            data={"content": content[:200]},
+            summary=f"{from_id} → {to_id}: {content[:50]}",
+        )
     
     def broadcast(self, from_id: str, content: str, to_roles: Optional[list[str]] = None):
         """Broadcast message to team."""
+        recipients = []
         if to_roles:
             for role in to_roles:
                 for agent in self.agents.values():
                     if agent.role == role and agent.id != from_id:
                         self.communication.send_message(from_id, agent.id, content)
+                        recipients.append(agent.id)
         else:
             for agent in self.agents.values():
                 if agent.id != from_id:
                     self.communication.send_message(from_id, agent.id, content)
+                    recipients.append(agent.id)
+        
+        # Track in interaction stream
+        if recipients:
+            self.interaction_stream.record(
+                InteractionType.MESSAGE_SENT,
+                source=from_id,
+                target=", ".join(recipients[:5]) + (f" +{len(recipients)-5}" if len(recipients) > 5 else ""),
+                data={"content": content[:200], "broadcast": True, "recipient_count": len(recipients)},
+                summary=f"{from_id} broadcast to {len(recipients)} agents: {content[:50]}",
+            )
     
     def get_learning(self) -> dict:
         """Get team's learning/performance data."""
@@ -629,7 +691,7 @@ Original task: {task}
     
     # ============== TASK QUEUE ==============
     
-    def add_task(self, description: str, priority: TaskPriority = TaskPriority.NORMAL) -> Task:
+    def add_task(self, description: str, priority: TaskPriority = TaskPriority.NORMAL, assigned_to: Optional[str] = None) -> Task:
         """Add a task to the queue."""
         task = self.queue.add(description, priority)
         self.events.emit(EventType.TASK_STARTED, {
@@ -637,11 +699,39 @@ Original task: {task}
             "description": description,
             "priority": priority.value,
         })
+        
+        # Track in interaction stream
+        self.interaction_stream.record(
+            InteractionType.TASK_CREATED,
+            source=assigned_to or "system",
+            target=task.id,
+            data={"description": description, "priority": priority.value},
+            summary=f"Task created: {description[:50]}",
+        )
+        
+        if assigned_to:
+            self.interaction_stream.record(
+                InteractionType.TASK_ASSIGNED,
+                source="system",
+                target=assigned_to,
+                data={"task_id": task.id, "description": description},
+                summary=f"Task assigned to {assigned_to}",
+            )
+        
         return task
     
     def get_next_task(self, agent_id: Optional[str] = None) -> Optional[Task]:
         """Get next task for an agent."""
-        return self.queue.get_next(agent_id)
+        task = self.queue.get_next(agent_id)
+        if task:
+            self.interaction_stream.record(
+                InteractionType.TASK_ASSIGNED,
+                source="system",
+                target=agent_id or task.assigned_agent,
+                data={"task_id": task.id, "description": task.description},
+                summary=f"Task assigned: {task.description[:50]}",
+            )
+        return task
     
     def complete_task(self, task_id: str, result: str):
         """Mark task as completed."""
@@ -653,6 +743,15 @@ Original task: {task}
                 "task_id": task_id,
                 "result": result[:200],
             }, task.assigned_agent)
+            
+            # Track in interaction stream
+            self.interaction_stream.record(
+                InteractionType.TASK_COMPLETED,
+                source=task.assigned_agent or "system",
+                target=task_id,
+                data={"result": result[:200], "description": task.description},
+                summary=f"Task completed by {task.assigned_agent or 'unknown'}: {task.description[:50]}",
+            )
     
     def fail_task(self, task_id: str, error: str):
         """Mark task as failed."""
@@ -664,6 +763,15 @@ Original task: {task}
                 "task_id": task_id,
                 "error": error[:200],
             }, task.assigned_agent)
+            
+            # Track in interaction stream
+            self.interaction_stream.record(
+                InteractionType.TASK_FAILED,
+                source=task.assigned_agent or "system",
+                target=task_id,
+                data={"error": error[:200], "description": task.description},
+                summary=f"Task failed: {task.description[:50]} - {error[:50]}",
+            )
     
     def get_queue_stats(self) -> dict:
         """Get task queue statistics."""
@@ -700,11 +808,31 @@ Original task: {task}
             "goal": goal,
             "tasks": len(tasks),
         })
+        
+        # Track
+        self.interaction_stream.record(
+            InteractionType.GOAL_DECOMPOSED,
+            source="user",
+            target="team",
+            data={"goal": goal, "subtasks": len(tasks)},
+            summary=f"Goal decomposed into {len(tasks)} tasks: {goal[:50]}",
+        )
+        
         return tasks
     
     def request_help(self, from_agent: str, task: str, description: str) -> list[dict]:
         """Request help from other agents."""
         profiles = self.hub.request_help(from_agent, task, description)
+        
+        # Track
+        self.interaction_stream.record(
+            InteractionType.HELP_REQUESTED,
+            source=from_agent,
+            target="team",
+            data={"task": task, "description": description[:200], "helpers_found": len(profiles)},
+            summary=f"{from_agent} requests help: {task[:50]}",
+        )
+        
         return [p.to_dict() for p in profiles]
     
     def get_hub_status(self) -> dict:
@@ -867,7 +995,7 @@ Original task: {task}
     def create_plan(self, goal: str) -> dict:
         """Create a plan for a goal."""
         plan = self.planner.decompose_goal(goal)
-        return {
+        result = {
             "name": plan.name,
             "description": plan.description,
             "steps_count": len(plan.steps),
@@ -881,6 +1009,17 @@ Original task: {task}
                 for s in plan.steps
             ],
         }
+        
+        # Track
+        self.interaction_stream.record(
+            InteractionType.PLAN_CREATED,
+            source="user",
+            target="team",
+            data={"goal": goal, "steps": len(plan.steps)},
+            summary=f"Plan created with {len(plan.steps)} steps for: {goal[:50]}",
+        )
+        
+        return result
     
     def get_recommended_plan(self, goal: str) -> dict:
         """Get a recommended plan for a goal."""
@@ -897,7 +1036,25 @@ Original task: {task}
     ) -> dict:
         """Make a decision."""
         decision = self.decision_engine.decide(decision_type, options, context, strategy)
-        return decision.to_dict()
+        result = decision.to_dict()
+        
+        # Track
+        self.interaction_stream.record(
+            InteractionType.DECISION_MADE,
+            source="decision_engine",
+            target=decision.chosen,
+            data={
+                "decision_type": decision_type,
+                "options": options,
+                "chosen": decision.chosen,
+                "confidence": decision.confidence,
+                "reasoning": decision.reasoning[:200],
+                "strategy": strategy,
+            },
+            summary=f"Decision: {decision.chosen} (confidence: {decision.confidence:.0%})",
+        )
+        
+        return result
     
     def record_decision_outcome(self, decision_id: str, outcome: str, was_correct: bool):
         """Record decision outcome for learning."""
@@ -932,18 +1089,45 @@ Original task: {task}
         priority: int = 5,
     ) -> dict:
         """Negotiate for a resource between agents."""
-        return self.negotiator.negotiate_resource(
+        result = self.negotiator.negotiate_resource(
             requester, provider, resource, amount, priority
         )
+        
+        # Track
+        self.interaction_stream.record(
+            InteractionType.NEGOTIATION_COMPLETED,
+            source=requester,
+            target=provider,
+            data={
+                "resource": resource,
+                "amount": amount,
+                "priority": priority,
+                "result": result.get("status"),
+            },
+            summary=f"{requester} ↔ {provider}: {result.get('status', 'unknown')} on {resource}",
+        )
+        
+        return result
     
     def start_negotiation(self, agent_a: str, agent_b: str, topic: str) -> dict:
         """Start a negotiation between two agents."""
         neg = self.negotiator.start_negotiation(agent_a, agent_b, topic)
-        return {
+        result = {
             "negotiation_id": neg.negotiation_id,
             "topic": neg.topic,
             "agents": [neg.agent_a, neg.agent_b],
         }
+        
+        # Track
+        self.interaction_stream.record(
+            InteractionType.NEGOTIATION_STARTED,
+            source=agent_a,
+            target=agent_b,
+            data={"topic": topic, "negotiation_id": neg.negotiation_id},
+            summary=f"Negotiation: {agent_a} ↔ {agent_b} on '{topic}'",
+        )
+        
+        return result
     
     def resolve_conflict(
         self,
@@ -952,7 +1136,22 @@ Original task: {task}
         details: dict,
     ) -> dict:
         """Resolve a conflict between agents."""
-        return self.conflict_resolver.resolve(conflict_type, agents, details)
+        result = self.conflict_resolver.resolve(conflict_type, agents, details)
+        
+        # Track
+        self.interaction_stream.record(
+            InteractionType.CONFLICT_RESOLVED,
+            source="conflict_resolver",
+            target=", ".join(agents),
+            data={
+                "conflict_type": conflict_type,
+                "details": details,
+                "resolution": result,
+            },
+            summary=f"Conflict ({conflict_type}) resolved between {len(agents)} agents",
+        )
+        
+        return result
     
     def get_negotiation_statistics(self) -> dict:
         """Get negotiation statistics."""
@@ -1091,7 +1290,24 @@ Original task: {task}
             ]
         
         dream = self.dream_engine.dream(agent_id, memory_contents)
-        return dream.to_dict() if dream else None
+        result = dream.to_dict() if dream else None
+        
+        if result:
+            # Track
+            self.interaction_stream.record(
+                InteractionType.DREAM_GENERATED,
+                source=agent_id,
+                target="self",
+                data={
+                    "dream_type": result["dream_type"],
+                    "content": result["content"],
+                    "insights": result["insights"],
+                    "novelty": result["novelty_score"],
+                },
+                summary=f"{agent_id} dreamed: {result['content'][:50]}",
+            )
+        
+        return result
     
     def get_top_dreams(self, limit: int = 5) -> list[dict]:
         """Get top creative dreams."""
@@ -1408,3 +1624,92 @@ Original task: {task}
     def get_existential_report(self, agent_id: str) -> dict:
         """Get existential report."""
         return self.sentience.get_existential_report(agent_id)
+    
+    # ============== INTERACTION TRACKING (for UI) ==============
+    
+    def get_interaction_stream(
+        self,
+        interaction_type: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        limit: int = 100,
+    ) -> list[dict]:
+        """Get interactions for UI display."""
+        from .interactions import InteractionType as IT
+        
+        type_filter = IT(interaction_type) if interaction_type else None
+        return self.interaction_stream.get_interactions(
+            interaction_type=type_filter,
+            agent_id=agent_id,
+            limit=limit,
+        )
+    
+    def get_interaction_timeline(self, limit: int = 500) -> list[dict]:
+        """Get full timeline of interactions for UI."""
+        return self.interaction_stream.get_timeline(limit=limit)
+    
+    def get_interaction_statistics(self) -> dict:
+        """Get interaction statistics for UI dashboard."""
+        return self.interaction_stream.get_statistics()
+    
+    def get_active_agents(self) -> list[dict]:
+        """Get currently active agents based on interactions."""
+        return self.interaction_stream.get_active_agents()
+    
+    def get_interaction_graph(self) -> dict:
+        """Get interaction graph (nodes + edges) for visualization."""
+        return self.interaction_stream.get_graph()
+    
+    def subscribe_to_interactions(self, callback: callable):
+        """Subscribe to live interaction stream (for WebSocket)."""
+        self.interaction_stream.subscribe(callback)
+    
+    def unsubscribe_from_interactions(self, callback: callable):
+        """Unsubscribe from live stream."""
+        self.interaction_stream.unsubscribe(callback)
+    
+    def start_conversation(self, participants: list[str], topic: str = "") -> str:
+        """Start a conversation between agents."""
+        conv_id = self.conversations.start_conversation(participants, topic)
+        
+        # Track
+        self.interaction_stream.record(
+            InteractionType.MINDS_MERGED,
+            source="system",
+            target=conv_id,
+            data={"participants": participants, "topic": topic},
+            summary=f"Conversation started: {topic or 'untitled'} ({len(participants)} participants)",
+        )
+        
+        return conv_id
+    
+    def add_conversation_message(
+        self,
+        conversation_id: str,
+        sender: str,
+        content: str,
+        message_type: str = "text",
+    ) -> Optional[dict]:
+        """Add a message to a conversation."""
+        msg = self.conversations.add_message(
+            conversation_id, sender, content, message_type
+        )
+        
+        if msg:
+            # Track
+            self.interaction_stream.record(
+                InteractionType.MESSAGE_SENT,
+                source=sender,
+                target=f"conversation:{conversation_id}",
+                data={"content": content[:200], "type": message_type},
+                summary=f"{sender} said: {content[:50]}",
+            )
+        
+        return msg
+    
+    def get_conversation(self, conversation_id: str) -> Optional[dict]:
+        """Get a conversation."""
+        return self.conversations.get_conversation(conversation_id)
+    
+    def list_conversations(self, participant: Optional[str] = None, limit: int = 50) -> list[dict]:
+        """List conversations."""
+        return self.conversations.list_conversations(participant, limit)

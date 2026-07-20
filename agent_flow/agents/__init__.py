@@ -57,6 +57,11 @@ from .oracle import (
 from .empathy import (
     EmotionalState, EmpathyEngine
 )
+from .interactions import (
+    InteractionType, Interaction, InteractionStream,
+    AgentConversation, ConversationManager
+)
+from .persistence import PersistenceManager, AutoPersistence
 
 __all__ = [
     # Core
@@ -183,4 +188,13 @@ __all__ = [
     # Empathy
     "EmotionalState",
     "EmpathyEngine",
+    # Interactions
+    "InteractionType",
+    "Interaction",
+    "InteractionStream",
+    "AgentConversation",
+    "ConversationManager",
+    # Persistence
+    "PersistenceManager",
+    "AutoPersistence",
 ]
