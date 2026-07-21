@@ -5,12 +5,82 @@ from __future__ import annotations
 from typing import Optional
 from pydantic import BaseModel
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from agent_flow.agents import AgentTeam, DemoRunner, SCENARIOS
+from agent_flow.agents.world.api import world_router
+from agent_flow.agents.world.hermes_api import router as agentverse_router
+from agent_flow.agents.world.hermes_ui import get_agentverse_ui
 from hermes_cli.toolset_validation import validate_platform_toolsets
+
+
+# ---- Authentication Middleware ----
+class APIKeyAuthMiddleware(BaseHTTPMiddleware):
+    """Optional API key authentication for production."""
+
+    def __init__(self, app):
+        super().__init__(app)
+        self.api_key = None
+        import os
+        self.api_key = os.getenv("API_KEY", "").strip()
+        print(f"  🔑 API authentication: {'ENABLED' if self.api_key else 'DISABLED (no API_KEY set)'}")
+
+    async def dispatch(self, request: Request, call_next):
+        # Skip auth for health check and docs in all cases
+        if request.url.path in ("/health", "/docs", "/openapi.json", "/demo", "/"):
+            return await call_next(request)
+
+        if self.api_key:
+            req_key = request.headers.get("X-API-Key", "")
+            if req_key != self.api_key:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Unauthorized. Provide X-API-Key header."}
+                )
+
+        return await call_next(request)
+
+
+# ---- Rate Limiting Middleware (simple in-memory) ----
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Simple in-memory rate limiter."""
+
+    def __init__(self, app):
+        super().__init__(app)
+        self.requests: dict[str, list[float]] = {}
+        from datetime import datetime
+        self._datetime = datetime
+        import os
+        self.rate_per_minute = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path in ("/health",):
+            return await call_next(request)
+
+        client_ip = request.client.host if request.client else "unknown"
+        now = self._datetime.now().timestamp()
+
+        if client_ip not in self.requests:
+            self.requests[client_ip] = []
+
+        # Clean old entries
+        self.requests[client_ip] = [
+            t for t in self.requests[client_ip]
+            if now - t < 60
+        ]
+
+        if len(self.requests[client_ip]) >= self.rate_per_minute:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded. Try again in a minute."}
+            )
+
+        self.requests[client_ip].append(now)
+        return await call_next(request)
 
 
 # Initialize app
@@ -28,6 +98,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register world router
+app.include_router(world_router)
+
+# Register AgentVerse router (Hermes-powered agents)
+app.include_router(agentverse_router)
+
+# Authentication (optional — enabled if API_KEY is set)
+app.add_middleware(APIKeyAuthMiddleware)
+
+# Rate limiting
+app.add_middleware(RateLimitMiddleware)
 
 # Teams storage
 teams: dict[str, AgentTeam] = {}
@@ -171,8 +253,8 @@ async def add_agent(team_name: str, request: AddAgentRequest):
     
     # Validate tools via Hermes
     try:
-        validate_platform_toolsets(request.tools)
-    except ValueError as e:
+        validate_platform_toolsets(request.tools, lambda t: True)
+    except (ValueError, TypeError, Exception) as e:
         raise HTTPException(status_code=400, detail=str(e))
     
     team = teams[team_name]
@@ -190,7 +272,22 @@ async def add_agent(team_name: str, request: AddAgentRequest):
         "agent_id": request.agent_id,
         "role": request.role,
         "model": request.model or "gpt-4o-mini (default)",
+        "learning_loop": team.agents[request.agent_id].learning_loop.summary(),
     }
+
+
+@app.get("/teams/{team_name}/agents/{agent_id}/learning")
+async def get_agent_learning(team_name: str, agent_id: str):
+    """Get agent's Hermes learning loop data."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    team = teams[team_name]
+    agent = team.agents.get(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    return agent.learning_loop.summary()
 
 
 @app.get("/teams/{team_name}/agents", response_model=dict)

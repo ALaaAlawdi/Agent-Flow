@@ -1,0 +1,266 @@
+[
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 1
+    },
+    "importance": 0.5,
+    "timestamp": 1784671019.9493756,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Noor",
+      "iteration": 2
+    },
+    "importance": 0.8,
+    "timestamp": 1784671027.291564,
+    "nudged_at": 1784673034.4051776
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "answer_question",
+      "result": "answered",
+      "iteration": 3
+    },
+    "importance": 0.5,
+    "timestamp": 1784671047.947042,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "acknowledge_greeting",
+      "result": "completed: greeted by Noor",
+      "iteration": 4
+    },
+    "importance": 0.8,
+    "timestamp": 1784671065.1403482,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 5
+    },
+    "importance": 0.5,
+    "timestamp": 1784671073.6607995,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Noor",
+      "iteration": 6
+    },
+    "importance": 0.8,
+    "timestamp": 1784671081.5410578,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "answer_question",
+      "result": "answered",
+      "iteration": 1
+    },
+    "importance": 0.5,
+    "timestamp": 1784671729.338012,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 2
+    },
+    "importance": 0.5,
+    "timestamp": 1784671735.6175628,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Noor",
+      "iteration": 3
+    },
+    "importance": 0.8,
+    "timestamp": 1784671743.6888568,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 4
+    },
+    "importance": 0.5,
+    "timestamp": 1784671751.4459445,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Sara",
+      "iteration": 5
+    },
+    "importance": 0.8,
+    "timestamp": 1784671764.7625198,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "answer_question",
+      "result": "answered",
+      "iteration": 6
+    },
+    "importance": 0.5,
+    "timestamp": 1784671784.20587,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "acknowledge_greeting",
+      "result": "completed: greeted by Noor",
+      "iteration": 7
+    },
+    "importance": 0.8,
+    "timestamp": 1784671818.9538245,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "acknowledge_greeting",
+      "result": "completed: greeted by Noor",
+      "iteration": 1
+    },
+    "importance": 0.8,
+    "timestamp": 1784672919.4920475,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 2
+    },
+    "importance": 0.5,
+    "timestamp": 1784672926.6357238,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Sara",
+      "iteration": 3
+    },
+    "importance": 0.8,
+    "timestamp": 1784672940.8709621,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "greet_agent",
+      "result": "completed: met Noor",
+      "iteration": 4
+    },
+    "importance": 0.8,
+    "timestamp": 1784672949.4942548,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "answer_question",
+      "result": "answered",
+      "iteration": 5
+    },
+    "importance": 0.5,
+    "timestamp": 1784672975.5612938,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "acknowledge_greeting",
+      "result": "completed: greeted by Sara",
+      "iteration": 6
+    },
+    "importance": 0.8,
+    "timestamp": 1784672991.3160117,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 7
+    },
+    "importance": 0.5,
+    "timestamp": 1784673001.2622502,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Sara",
+      "iteration": 8
+    },
+    "importance": 0.8,
+    "timestamp": 1784673009.8378742,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "acknowledge_greeting",
+      "result": "completed: greeted by Noor",
+      "iteration": 9
+    },
+    "importance": 0.8,
+    "timestamp": 1784673027.8466222,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "greet_agent",
+      "result": "completed: met Noor",
+      "iteration": 10
+    },
+    "importance": 0.8,
+    "timestamp": 1784673034.4045844,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "acknowledge_greeting",
+      "result": "completed: greeted by Noor",
+      "iteration": 11
+    },
+    "importance": 0.8,
+    "timestamp": 1784673108.663381,
+    "nudged_at": null
+  }
+]
