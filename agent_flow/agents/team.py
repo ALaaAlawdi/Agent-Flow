@@ -61,6 +61,11 @@ class TeamAgent:
     - Other team members
     - Shared environment
     - Team goals
+    
+    🧠 Automatically gets a Hermes Learning Loop:
+    - Agent-curated memory with self-nudge
+    - Autonomous skill creation from experience
+    - Self-improving skills
     """
     
     def __init__(
@@ -69,11 +74,17 @@ class TeamAgent:
         role: str,
         hermes_agent: AIAgent,
         team: "AgentTeam",
+        display_name: str = "",
     ):
         self.id = agent_id
         self.role = role
+        self.display_name = display_name or agent_id
         self.hermes_agent = hermes_agent
         self.team = team
+        
+        # 🧠 Hermes Learning Loop — auto-attached to every agent
+        from agent_flow.agents.hermes_learning_loop import AgentLearningFactory
+        self.learning_loop = AgentLearningFactory.create_for(agent_id, self.display_name)
         
         # Performance tracking
         self.tasks_completed = 0
@@ -384,7 +395,11 @@ class AgentTeam:
             role=role,
             hermes_agent=hermes_agent,
             team=self,
+            display_name=agent_id,
         )
+        
+        # 🧠 سجّل إنشاء الوكيل في حلقة التعلم
+        team_agent.learning_loop.after_action("agent_created", f"completed: joined team {self.name}")
         
         # Register
         self.agents[agent_id] = team_agent

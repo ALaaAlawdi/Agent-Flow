@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE = "/api";
 
 export type Team = { name: string; goal: string; created_at: string; };
 export type Scenario = { scenario_id: string; title: string; description: string; icon: string; category: string; team_size: number; step_count: number; estimated_time: string; };

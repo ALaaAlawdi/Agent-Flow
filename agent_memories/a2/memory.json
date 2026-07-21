@@ -53,5 +53,126 @@
     "importance": 0.5,
     "timestamp": 1784671081.5406477,
     "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 1
+    },
+    "importance": 0.5,
+    "timestamp": 1784671722.0990212,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Zain",
+      "iteration": 2
+    },
+    "importance": 0.8,
+    "timestamp": 1784671729.338391,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "answer_question",
+      "result": "answered",
+      "iteration": 3
+    },
+    "importance": 0.5,
+    "timestamp": 1784671743.6883097,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 4
+    },
+    "importance": 0.5,
+    "timestamp": 1784671791.120581,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Sara",
+      "iteration": 5
+    },
+    "importance": 0.8,
+    "timestamp": 1784671804.2442973,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "greet_agent",
+      "result": "completed: met Zain",
+      "iteration": 6
+    },
+    "importance": 0.8,
+    "timestamp": 1784671812.3613946,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "greet_agent",
+      "result": "completed: met Zain",
+      "iteration": 1
+    },
+    "importance": 0.8,
+    "timestamp": 1784672911.9257193,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "acknowledge_greeting",
+      "result": "completed: greeted by Zain",
+      "iteration": 2
+    },
+    "importance": 0.8,
+    "timestamp": 1784672958.439672,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "greet_agent",
+      "result": "completed: met Zain",
+      "iteration": 3
+    },
+    "importance": 0.8,
+    "timestamp": 1784673019.5331528,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "acknowledge_greeting",
+      "result": "completed: greeted by Zain",
+      "iteration": 4
+    },
+    "importance": 0.8,
+    "timestamp": 1784673041.1647909,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "greet_agent",
+      "result": "completed: met Zain",
+      "iteration": 5
+    },
+    "importance": 0.8,
+    "timestamp": 1784673101.0151331,
+    "nudged_at": null
   }
 ]
