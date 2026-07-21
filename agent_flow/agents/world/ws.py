@@ -58,9 +58,12 @@ async def run_world_ticks(world_name: str, ticks: int = 20, interval: float = 2.
     if not world:
         return
 
+    from agent_flow.agents.world.company_integration import company_store
+
     for _ in range(ticks):
         await world.tick()
         state = world.get_state()
+        state["companies"] = [c.as_dict() for c in company_store.all()]
         await ws_manager.broadcast(world_name, {
             "type": "world_tick",
             "data": state,

@@ -5,7 +5,15 @@ import { useEffect, useRef, useState, useCallback } from "react";
 type Agent = { agent_id: string; name: string; position: { x: number; y: number }; state: string; energy: number; skills: string[]; discovered: number; messages_sent: number; messages_received: number };
 type Location = { id: string; name: string; position: { x: number; y: number }; type: string };
 type Message = { message_id: string; sender_name: string; content: string; target: string };
-type WorldState = { name: string; width: number; height: number; agents: Agent[]; locations: Location[]; active_messages: Message[] };
+type WorldState = { name: string; width: number; height: number; agents: Agent[]; locations: Location[]; active_messages: Message[]; companies?: Company[] };
+type Company = { name: string; description: string; position: { x: number; y: number }; employees: string[]; completed_tasks: number; revenue: number; status: string };
+
+const COMPANY_COLORS: Record<string, string> = {
+  "Agent-Flow": "#8b5cf6",
+  "VirtualCorp": "#06b6d4",
+  "Hermes Brain": "#f43f5e",
+  "DataSphere": "#22c55e",
+};
 
 const WORLD_SIZE = 300;
 const BG_COLOR = "#0f0f23";
@@ -276,6 +284,34 @@ export default function WorldPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Companies */}
+          <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
+            <h2 className="text-white font-semibold text-sm mb-3">🏢 Companies</h2>
+            <div className="space-y-2">
+              {state?.companies?.map((c) => (
+                <div key={c.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COMPANY_COLORS[c.name] || "#8b5cf6" }} />
+                    <span className="text-white text-sm">{c.name}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                      c.status === "busy" ? "bg-emerald-500/20 text-emerald-400" : "bg-zinc-700 text-zinc-400"
+                    }`}>
+                      {c.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-zinc-500">
+                    <span>👥{c.employees.length}</span>
+                    <span>✅{c.completed_tasks}</span>
+                    <span>💰${c.revenue.toFixed(1)}</span>
+                  </div>
+                </div>
+              ))}
+              {(!state?.companies || state.companies.length === 0) && (
+                <p className="text-zinc-600 text-xs">No companies yet</p>
+              )}
             </div>
           </div>
 

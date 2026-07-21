@@ -404,6 +404,11 @@ class WorldEngine:
                 elif agent.state == AgentState.TALKING:
                     agent.state = AgentState.IDLE
 
+            # مزامنة مع الشركات كل 5 نبضات
+            if self.tick_count % 5 == 0:
+                from agent_flow.agents.world.company_integration import sync_world_with_companies
+                asyncio.create_task(sync_world_with_companies(self))
+
     async def run(self, ticks: int = 10, interval: float = 1.0):
         """تشغيل العالم لعدد من النبضات."""
         self.running = True
@@ -461,8 +466,17 @@ class WorldEngine:
 
         for agent_id, name, skills, pos in agents_config:
             agent = WorldAgent(agent_id, name, pos, skills=skills)
-            agent.sense_range = 120  # يرى بعيداً
-            agent.hear_range = 80    # يسمع بعيداً
+            agent.sense_range = 150  # يرى بعيداً
+            agent.hear_range = 100   # يسمع بعيداً
             world.spawn_agent(agent)
+
+        # إضافة الشركات وتعيين الوكلاء
+        from agent_flow.agents.world.company_integration import create_default_companies, assign_agents_to_companies
+        create_default_companies(world)
+        import asyncio
+        try:
+            asyncio.get_running_loop().create_task(assign_agents_to_companies(world))
+        except RuntimeError:
+            pass  # No running loop — will be assigned on first tick
 
         return world

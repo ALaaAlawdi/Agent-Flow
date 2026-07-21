@@ -15,15 +15,67 @@ from agent_flow.agents.world.ws import (
     run_world_ticks,
     world_manager,
 )
+from agent_flow.agents.world.company_integration import (
+    company_store, create_default_companies, assign_agents_to_companies,
+    get_agent_company, get_company_agents, get_nearby_companies,
+)
 
 router = APIRouter(prefix="/world", tags=["world"])
 
 
 @router.get("/{world_name}")
 async def get_world_state(world_name: str):
-    """حالة العالم الكاملة."""
+    """حالة العالم الكاملة مع الشركات."""
     world = get_or_create_world(world_name)
-    return world.get_state()
+    state = world.get_state()
+    state["companies"] = [c.as_dict() for c in company_store.all()]
+    return state
+
+
+@router.get("/{world_name}/companies")
+async def list_companies(world_name: str):
+    """قائمة الشركات في العالم."""
+    return {"companies": [c.as_dict() for c in company_store.all()]}
+
+
+@router.get("/{world_name}/companies/{name}")
+async def get_company(world_name: str, name: str):
+    """معلومات شركة محددة."""
+    company = company_store.get(name)
+    if not company:
+        return {"error": "Company not found"}, 404
+    return company.as_dict()
+
+
+@router.get("/{world_name}/agents/{agent_id}/company")
+async def agent_company(world_name: str, agent_id: str):
+    """معرفة شركة وكيل معين."""
+    company = get_agent_company(agent_id)
+    if not company:
+        return {"company": None}
+    return {"company": company.as_dict()}
+
+
+@router.post("/{world_name}/companies/{name}/hire")
+async def hire_agent(world_name: str, name: str, agent_id: str):
+    """توظيف وكيل في شركة."""
+    world = get_or_create_world(world_name)
+    company = company_store.get(name)
+    if not company:
+        return {"error": "Company not found"}, 404
+    if agent_id not in world.agents:
+        return {"error": "Agent not found"}, 404
+
+    company.add_employee(agent_id)
+    world.agents[agent_id].current_location = f"company_{name.lower().replace(' ', '_')}"
+
+    await ws_manager.broadcast(world_name, {
+        "type": "agent_hired",
+        "agent_id": agent_id,
+        "company": name,
+    })
+
+    return {"status": "hired", "agent_id": agent_id, "company": name}
 
 
 @router.post("/{world_name}/agents")
@@ -113,9 +165,11 @@ async def world_tick(world_name: str, count: int = 1):
     world = get_or_create_world(world_name)
     for _ in range(count):
         await world.tick()
+    state = world.get_state()
+    state["companies"] = [c.as_dict() for c in company_store.all()]
     await ws_manager.broadcast(world_name, {
         "type": "world_tick",
-        "data": world.get_state(),
+        "data": state,
     })
     return {"tick": world.tick_count, "agent_count": len(world.agents), "message_count": len(world.active_messages)}
 
@@ -135,10 +189,12 @@ async def world_websocket(websocket: WebSocket, world_name: str):
     ws_manager.register(world_name, websocket)
 
     try:
-        # إرسال الحالة الأولية
+        # إرسال الحالة الأولية مع الشركات
+        state = world.get_state()
+        state["companies"] = [c.as_dict() for c in company_store.all()]
         await websocket.send_json({
             "type": "world_state",
-            "data": world.get_state(),
+            "data": state,
         })
 
         # استقبال أوامر من الواجهة
