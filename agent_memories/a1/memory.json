@@ -1,0 +1,68 @@
+[
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 1
+    },
+    "importance": 0.5,
+    "timestamp": 1784671019.9493756,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Noor",
+      "iteration": 2
+    },
+    "importance": 0.8,
+    "timestamp": 1784671027.291564,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "answer_question",
+      "result": "answered",
+      "iteration": 3
+    },
+    "importance": 0.5,
+    "timestamp": 1784671047.947042,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "acknowledge_greeting",
+      "result": "completed: greeted by Noor",
+      "iteration": 4
+    },
+    "importance": 0.8,
+    "timestamp": 1784671065.1403482,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 5
+    },
+    "importance": 0.5,
+    "timestamp": 1784671073.6607995,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Noor",
+      "iteration": 6
+    },
+    "importance": 0.8,
+    "timestamp": 1784671081.5410578,
+    "nudged_at": null
+  }
+]

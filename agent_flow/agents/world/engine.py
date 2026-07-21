@@ -14,6 +14,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
+from agent_flow.agents.world.hermes_brain import HermesBrain
+
 
 class AgentState(Enum):
     IDLE = "idle"
@@ -100,23 +102,38 @@ class SenseMessage:
 
 
 class WorldAgent:
-    """وكيل يعيش في العالم — له موقع، حواس، ذاكرة، وحالة."""
+    """وكيل يعيش في العالم — له عقل Hermes الخاص به، يتعلم ويتواصل طبيعياً."""
 
-    def __init__(self, agent_id: str, name: str, position: Position, skills: list[str] = None):
+    def __init__(
+        self,
+        agent_id: str,
+        name: str,
+        position: Position,
+        skills: list[str] = None,
+        brain: Optional[HermesBrain] = None,
+    ):
         self.agent_id = agent_id
         self.name = name
         self.position = position
-        self.skills = skills or ["general"]
+        self.skills = skills or ["exploring"]
         self.state = AgentState.IDLE
         self.energy = 100.0
-        self.sense_range = 50.0  # مدى الرؤية
-        self.hear_range = 30.0   # مدى السمع
+        self.sense_range = 150.0  # يرى بعيداً
+        self.hear_range = 100.0   # يسمع بعيداً
         self.memory: list[SenseMessage] = []
         self.messages_sent = 0
         self.messages_received = 0
         self.agents_discovered: set[str] = set()
         self.current_location: Optional[str] = None
         self.created_at = time.time()
+
+        # Hermes Brain — يتعلم، يقرر، يتذكر، يكتشف دوره بنفسه
+        self.brain = brain or HermesBrain(agent_id, name, skills)
+
+        # Tracking
+        self.last_decision: Optional[dict] = None
+        self.talking_to: Optional[str] = None  # who I'm currently talking to
+        self.conversation_turns = 0
 
     def consume_energy(self, amount: float) -> bool:
         """استهلاك طاقة. يرجع False إذا الطاقة خلصت."""
