@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from agent_flow.agents import AgentTeam, DemoRunner, SCENARIOS
+from agent_flow.agents.world.api import world_router
 from hermes_cli.toolset_validation import validate_platform_toolsets
 
 
@@ -95,6 +96,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register world router
+app.include_router(world_router)
 
 # Authentication (optional — enabled if API_KEY is set)
 app.add_middleware(APIKeyAuthMiddleware)

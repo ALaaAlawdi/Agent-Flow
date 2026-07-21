@@ -1,8 +1,9 @@
-import { LayoutDashboard, Bot, Play, BarChart3, Settings } from "lucide-react";
+import { Globe, LayoutDashboard, Bot, Play, BarChart3, Settings } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
+  { icon: Globe, label: "AgentVerse", href: "/world" },
   { icon: Play, label: "Scenarios", href: "/scenarios" },
   { icon: Bot, label: "Teams", href: "/teams" },
   { icon: BarChart3, label: "Analytics", href: "/analytics" },
