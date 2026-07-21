@@ -53,5 +53,71 @@
     "importance": 0.5,
     "timestamp": 1784671081.5406477,
     "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 1
+    },
+    "importance": 0.5,
+    "timestamp": 1784671722.0990212,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Zain",
+      "iteration": 2
+    },
+    "importance": 0.8,
+    "timestamp": 1784671729.338391,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "answer_question",
+      "result": "answered",
+      "iteration": 3
+    },
+    "importance": 0.5,
+    "timestamp": 1784671743.6883097,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 4
+    },
+    "importance": 0.5,
+    "timestamp": 1784671791.120581,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Sara",
+      "iteration": 5
+    },
+    "importance": 0.8,
+    "timestamp": 1784671804.2442973,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "greet_agent",
+      "result": "completed: met Zain",
+      "iteration": 6
+    },
+    "importance": 0.8,
+    "timestamp": 1784671812.3613946,
+    "nudged_at": null
   }
 ]

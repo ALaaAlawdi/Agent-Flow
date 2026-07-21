@@ -64,5 +64,82 @@
     "importance": 0.8,
     "timestamp": 1784671081.5410578,
     "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "answer_question",
+      "result": "answered",
+      "iteration": 1
+    },
+    "importance": 0.5,
+    "timestamp": 1784671729.338012,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 2
+    },
+    "importance": 0.5,
+    "timestamp": 1784671735.6175628,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Noor",
+      "iteration": 3
+    },
+    "importance": 0.8,
+    "timestamp": 1784671743.6888568,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 4
+    },
+    "importance": 0.5,
+    "timestamp": 1784671751.4459445,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Sara",
+      "iteration": 5
+    },
+    "importance": 0.8,
+    "timestamp": 1784671764.7625198,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "answer_question",
+      "result": "answered",
+      "iteration": 6
+    },
+    "importance": 0.5,
+    "timestamp": 1784671784.20587,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "acknowledge_greeting",
+      "result": "completed: greeted by Noor",
+      "iteration": 7
+    },
+    "importance": 0.8,
+    "timestamp": 1784671818.9538245,
+    "nudged_at": null
   }
 ]
