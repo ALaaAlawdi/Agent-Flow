@@ -15,6 +15,7 @@ from agent_flow.agents import AgentTeam, DemoRunner, SCENARIOS
 from agent_flow.agents.world.api import world_router
 from agent_flow.agents.world.hermes_api import router as agentverse_router
 from agent_flow.agents.world.hermes_ui import get_agentverse_ui
+from agent_flow.agents.human_society_api import router as society_router
 from hermes_cli.toolset_validation import validate_platform_toolsets
 
 
@@ -104,6 +105,9 @@ app.include_router(world_router)
 
 # Register AgentVerse router (Hermes-powered agents)
 app.include_router(agentverse_router)
+
+# Register Human Society router
+app.include_router(society_router)
 
 # Authentication (optional — enabled if API_KEY is set)
 app.add_middleware(APIKeyAuthMiddleware)
