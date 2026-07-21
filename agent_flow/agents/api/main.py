@@ -1574,11 +1574,6 @@ async def root():
     }
 
 
-@app.get("/agentverse")
-async def agentverse_ui():
-    """AgentVerse UI — وكلاء يتكلمون بـ DeepSeek."""
-    return get_agentverse_ui()
-
 @app.get("/demo")
 async def demo_ui():
     """Serve the demo HTML page."""

@@ -18,6 +18,7 @@ world.add_agent("a2", "Noor", "Code Apprentice")
 world.add_agent("a3", "Sara", "Design Explorer")
 
 
+@router.get("")
 @router.get("/")
 async def get_world():
     """حالة العالم الحالية."""

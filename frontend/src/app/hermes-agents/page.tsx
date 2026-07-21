@@ -37,7 +37,7 @@ export default function HermesAgentsPage() {
 
   const load = async () => {
     try {
-      const res = await fetch("http://localhost:8000/agentverse/");
+      const res = await fetch("/api/agentverse");
       const data = await res.json();
       setAgents(data.agents || {});
       setConversations(data.conversations || []);
@@ -49,13 +49,13 @@ export default function HermesAgentsPage() {
 
   const doTick = async (count: number) => {
     setLoading(true);
-    await fetch(`http://localhost:8000/agentverse/tick?count=${count}`, { method: "POST" });
+    await fetch(`/api/agentverse/tick?count=${count}`, { method: "POST" });
     await load();
     setLoading(false);
   };
 
   const reset = async () => {
-    await fetch("http://localhost:8000/agentverse/reset", { method: "POST" });
+    await fetch("/api/agentverse/reset", { method: "POST" });
     await load();
   };
 

@@ -42,5 +42,60 @@
     "importance": 0.5,
     "timestamp": 1784671804.2439888,
     "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "answer_question",
+      "result": "answered",
+      "iteration": 1
+    },
+    "importance": 0.5,
+    "timestamp": 1784672940.8701622,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "ask_question",
+      "result": "asked",
+      "iteration": 2
+    },
+    "importance": 0.5,
+    "timestamp": 1784672965.5431304,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "learn_topic",
+      "result": "completed: talked_to_Zain",
+      "iteration": 3
+    },
+    "importance": 0.8,
+    "timestamp": 1784672975.5618172,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "greet_agent",
+      "result": "completed: met Zain",
+      "iteration": 4
+    },
+    "importance": 0.8,
+    "timestamp": 1784672984.078416,
+    "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "answer_question",
+      "result": "answered",
+      "iteration": 5
+    },
+    "importance": 0.5,
+    "timestamp": 1784673009.8374004,
+    "nudged_at": null
   }
 ]
