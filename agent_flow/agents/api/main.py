@@ -253,8 +253,8 @@ async def add_agent(team_name: str, request: AddAgentRequest):
     
     # Validate tools via Hermes
     try:
-        validate_platform_toolsets(request.tools)
-    except ValueError as e:
+        validate_platform_toolsets(request.tools, lambda t: True)
+    except (ValueError, TypeError, Exception) as e:
         raise HTTPException(status_code=400, detail=str(e))
     
     team = teams[team_name]
@@ -272,7 +272,22 @@ async def add_agent(team_name: str, request: AddAgentRequest):
         "agent_id": request.agent_id,
         "role": request.role,
         "model": request.model or "gpt-4o-mini (default)",
+        "learning_loop": team.agents[request.agent_id].learning_loop.summary(),
     }
+
+
+@app.get("/teams/{team_name}/agents/{agent_id}/learning")
+async def get_agent_learning(team_name: str, agent_id: str):
+    """Get agent's Hermes learning loop data."""
+    if team_name not in teams:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    team = teams[team_name]
+    agent = team.agents.get(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    return agent.learning_loop.summary()
 
 
 @app.get("/teams/{team_name}/agents", response_model=dict)
