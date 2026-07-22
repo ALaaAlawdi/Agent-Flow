@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -13,12 +14,28 @@ from agent_flow.runtime import CompanyRuntime
 
 
 class HermesWorkerAdapterTests(unittest.TestCase):
+    def _write_fake_hermes(self, path: Path, script: str) -> Path:
+        """Write a cross-platform fake hermes executable. Returns the path to invoke.
+
+        On Windows, returns a .py file; hermes.py detects this and prepends sys.executable
+        so CreateProcess handles argument quoting natively (no cmd.exe shell issues).
+        On Unix, writes a shebang script and sets the executable bit.
+        """
+        body = script[script.index("\n") + 1:] if script.startswith("#!/") else script
+        if sys.platform == "win32":
+            py_path = path.parent / (path.name + ".py")
+            py_path.write_text(body, encoding="utf-8")
+            return py_path
+        path.write_text(script, encoding="utf-8")
+        path.chmod(0o700)
+        return path
+
     def test_runs_bounded_packet_through_hermes_without_exposing_capability(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             capture = root / "argv.json"
-            executable = root / "fake-hermes"
-            executable.write_text(
+            executable = self._write_fake_hermes(
+                root / "fake-hermes",
                 "#!/usr/bin/env python3\n"
                 "import json, os, sys\n"
                 "capture = {'argv': sys.argv[1:], "
@@ -26,9 +43,7 @@ class HermesWorkerAdapterTests(unittest.TestCase):
                 "open(os.environ['FAKE_HERMES_CAPTURE'], 'w').write(json.dumps(capture))\n"
                 "print(json.dumps({'artifact': 'thesis.md', 'verification': 'checked', "
                 "'summary': 'bounded result'}))\n",
-                encoding="utf-8",
             )
-            executable.chmod(0o700)
             packet = {
                 "mission_id": "mission-1",
                 "task_id": "mission_thesis",
@@ -95,12 +110,10 @@ class HermesWorkerAdapterTests(unittest.TestCase):
     def test_rejects_non_json_hermes_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            executable = root / "fake-hermes"
-            executable.write_text(
+            executable = self._write_fake_hermes(
+                root / "fake-hermes",
                 "#!/usr/bin/env python3\nprint('```json')\nprint('{}')\nprint('```')\n",
-                encoding="utf-8",
             )
-            executable.chmod(0o700)
             adapter = HermesWorkerAdapter(
                 executable=str(executable),
                 profile="agent-flow-founder",
@@ -114,12 +127,10 @@ class HermesWorkerAdapterTests(unittest.TestCase):
     def test_bounds_stdout_before_parsing(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            executable = root / "fake-hermes"
-            executable.write_text(
+            executable = self._write_fake_hermes(
+                root / "fake-hermes",
                 "#!/usr/bin/env python3\nprint('x' * 20000)\n",
-                encoding="utf-8",
             )
-            executable.chmod(0o700)
             adapter = HermesWorkerAdapter(
                 executable=str(executable),
                 profile="agent-flow-founder",
@@ -143,15 +154,13 @@ class HermesWorkerAdapterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             database = root / "company.db"
-            executable = root / "fake-hermes"
-            executable.write_text(
+            executable = self._write_fake_hermes(
+                root / "fake-hermes",
                 "#!/usr/bin/env python3\n"
                 "import json\n"
                 "print(json.dumps({'artifact': 'thesis.md', 'verification': 'checked', "
                 "'summary': 'completed by Hermes'}))\n",
-                encoding="utf-8",
             )
-            executable.chmod(0o700)
             runtime = CompanyRuntime(database)
             runtime.bootstrap()
             mission_id = runtime.create_mission("Hermes mission", "Use a Hermes worker", 120, "medium")

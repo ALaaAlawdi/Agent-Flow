@@ -6,6 +6,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Mapping
 
@@ -95,6 +96,10 @@ class HermesWorkerAdapter:
             "-t",
             ",".join(self.toolsets),
         ]
+        # On Windows, .py scripts are not directly executable; prepend the interpreter
+        # so subprocess uses CreateProcess natively (no cmd.exe shell quoting issues).
+        if sys.platform == "win32" and self.executable.lower().endswith(".py"):
+            command = [sys.executable] + command
         try:
             completed = subprocess.run(
                 command,

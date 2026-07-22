@@ -10,3 +10,4 @@ build/
 .agent-flow/
 demo-artifacts/
 agent_memories/
+.env
