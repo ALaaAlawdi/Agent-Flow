@@ -10,7 +10,7 @@ router = APIRouter(prefix="/live", tags=["live"])
 async def live_execute(task: str = "Explain AI in one sentence"):
     """Run a REAL agent task with DeepSeek and return the result."""
     import os
-    os.environ["DEEPSEEK_API_KEY"] = "sk-dd7cd5f55cdd4959b538aedfa526a37f"
+    os.environ["DEEPSEEK_API_KEY"] = os.getenv("DEEPSEEK_API_KEY", "")
 
     from agent_flow.agents import AgentTeam
     from agent_flow.agents.hermes_auto_wire import on_agent_created, on_agent_speak, on_task_created

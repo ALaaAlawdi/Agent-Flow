@@ -134,7 +134,7 @@ class DynamicAgentFactory:
             max_iterations=max_iterations,
             model=resolved_model,
             provider="deepseek",
-            api_key=os.getenv("DEEPSEEK_API_KEY") or "sk-dd7cd5f55cdd4959b538aedfa526a37f",
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
             
             # Callbacks for tracking
             tool_progress_callback=self._on_tool_progress,

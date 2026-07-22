@@ -208,7 +208,7 @@ renderAgents();
 @router.get("/agent")
 async def collab_agent(agent: str, role: str, task: str):
     """Call a specific agent with DeepSeek."""
-    os.environ["DEEPSEEK_API_KEY"] = "sk-dd7cd5f55cdd4959b538aedfa526a37f"
+    os.environ["DEEPSEEK_API_KEY"] = os.getenv("DEEPSEEK_API_KEY", "")
     
     from agent_flow.agents import AgentTeam
     

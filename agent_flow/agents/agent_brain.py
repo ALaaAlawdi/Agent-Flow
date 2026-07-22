@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse
 router = APIRouter(prefix="/brain", tags=["brain"])
 
 # Force DeepSeek
-os.environ["DEEPSEEK_API_KEY"] = "sk-dd7cd5f55cdd4959b538aedfa526a37f"
+os.environ["DEEPSEEK_API_KEY"] = os.getenv("DEEPSEEK_API_KEY", "")
 
 # Registry of available workers (agents that can be called)
 WORKERS = {

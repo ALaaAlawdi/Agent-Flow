@@ -33,7 +33,7 @@ def call_deepseek(prompt: str, timeout: int = 30) -> str:
         return call_deepseek._cache[cache_key]
     
     env = os.environ.copy()
-    env["DEEPSEEK_API_KEY"] = "sk-dd7cd5f55cdd4959b538aedfa526a37f"
+    env["DEEPSEEK_API_KEY"] = os.getenv("DEEPSEEK_API_KEY", "")
     env["HERMES_DEFAULT_MODEL"] = "deepseek-v4-pro"
     env["HERMES_DEFAULT_PROVIDER"] = "deepseek"
     try:
