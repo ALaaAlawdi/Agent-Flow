@@ -12,7 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ar" dir="rtl">
       <body className="bg-zinc-950 text-zinc-100 antialiased">
         <Sidebar />
-        <main className="pr-64 min-h-screen">
+        <main className="pl-64 min-h-screen">
           {children}
         </main>
       </body>
