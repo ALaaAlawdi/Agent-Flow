@@ -23,7 +23,15 @@ from typing import Optional
 
 
 def call_deepseek(prompt: str, timeout: int = 30) -> str:
-    """Call DeepSeek via Hermes CLI."""
+    """Call DeepSeek via Hermes CLI. Cached for repeated queries."""
+    # Simple cache for repeated queries
+    if not hasattr(call_deepseek, "_cache"):
+        call_deepseek._cache = {}
+    
+    cache_key = prompt[:80]
+    if cache_key in call_deepseek._cache:
+        return call_deepseek._cache[cache_key]
+    
     env = os.environ.copy()
     env["DEEPSEEK_API_KEY"] = "sk-dd7cd5f55cdd4959b538aedfa526a37f"
     env["HERMES_DEFAULT_MODEL"] = "deepseek-v4-pro"
@@ -38,7 +46,11 @@ def call_deepseek(prompt: str, timeout: int = 30) -> str:
             output = result.stderr.strip()
         if "agent failed" in output.lower():
             return ""
-        return output[:200]
+        output = output[:200]
+        call_deepseek._cache[cache_key] = output
+        if len(call_deepseek._cache) > 200:
+            call_deepseek._cache.clear()
+        return output
     except Exception:
         return ""
 
@@ -256,18 +268,23 @@ class AgentSociety:
         })
         return agent
 
-    def step(self):
-        """One world step — agents interact, try things, learn."""
+    def step(self, max_llm_calls: int = 4):
+        """One world step — agents interact, try things, learn.
+        
+        Limited to max_llm_calls DeepSeek calls per step for speed.
+        """
         self.time += 1
         agent_list = list(self.agents.values())
         random.shuffle(agent_list)
+        llm_calls = 0
 
         for agent in agent_list:
-            # 50% chance: try something new
-            if random.random() < 0.5:
+            # 40% chance: try something (reduced — uses LLM for error generation)
+            if random.random() < 0.4 and llm_calls < max_llm_calls:
                 action = f"{agent.role} task #{agent.attempts + 1}"
                 agent.current_task = action
                 success, result = agent.try_action(action)
+                llm_calls += 1
                 
                 status = "✅" if success else "❌"
                 self.conversations.append({
@@ -277,10 +294,10 @@ class AgentSociety:
                 
                 if not success:
                     agent.personality.traits["caution"] = min(1.0, 
-                        agent.personality.traits["caution"] + 0.02)  # يصبح أكثر حذراً
+                        agent.personality.traits["caution"] + 0.02)
 
-            # 30% chance: talk to someone
-            elif len(self.agents) > 1 and random.random() < 0.3:
+            # 25% chance: talk (uses LLM)
+            elif len(self.agents) > 1 and random.random() < 0.25 and llm_calls < max_llm_calls:
                 others = [a for a in agent_list if a.agent_id != agent.agent_id]
                 if others:
                     other = random.choice(others)
@@ -289,22 +306,23 @@ class AgentSociety:
                         "what I learned today",
                         "my biggest mistake",
                         "how to improve",
-                        "what I'm curious about",
                     ])
                     msg = agent.talk_to(other, topic)
+                    llm_calls += 1
                     self.conversations.append({
                         "time": self.time,
                         "event": msg
                     })
 
-        # Every 5 steps: agents reflect
-        if self.time % 5 == 0:
-            for agent in agent_list:
-                reflection = agent.reflect()
-                self.conversations.append({
-                    "time": self.time,
-                    "event": reflection
-                })
+        # Every 8 steps: one agent reflects (batched — only 1 LLM call)
+        if self.time % 8 == 0 and llm_calls < max_llm_calls:
+            agent = random.choice(agent_list)
+            reflection = agent.reflect()
+            llm_calls += 1
+            self.conversations.append({
+                "time": self.time,
+                "event": reflection
+            })
 
     def state(self) -> dict:
         return {
