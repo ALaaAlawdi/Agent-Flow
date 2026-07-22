@@ -9,5 +9,16 @@
     "importance": 0.8,
     "timestamp": 1784708555.6208982,
     "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "agent_created",
+      "result": "completed: joined team verify-test",
+      "iteration": 1
+    },
+    "importance": 0.8,
+    "timestamp": 1784710239.190833,
+    "nudged_at": null
   }
 ]
