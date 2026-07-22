@@ -38,14 +38,17 @@ class DynamicAgentFactory:
     
     # Available models - OpenAI is the default
     MODEL_REGISTRY = {
-        # OpenAI models (default)
+        # DeepSeek models (default now)
+        "deepseek-v4-pro": "deepseek-v4-pro",
+        "deepseek-v4-flash": "deepseek-v4-flash",
+        # OpenAI models
         "gpt-4o": "openai/gpt-4o",
         "gpt-4o-mini": "openai/gpt-4o-mini",
         "gpt-4-turbo": "openai/gpt-4-turbo",
         "gpt-3.5-turbo": "openai/gpt-3.5-turbo",
         "o1-preview": "openai/o1-preview",
         "o1-mini": "openai/o1-mini",
-        # Anthropic models (still available)
+        # Anthropic models
         "claude-sonnet-4": "anthropic/claude-sonnet-4",
         "claude-opus-4": "anthropic/claude-opus-4",
         "claude-haiku": "anthropic/claude-haiku",
@@ -54,7 +57,7 @@ class DynamicAgentFactory:
         "llama-3": "meta/llama-3",
     }
     
-    DEFAULT_MODEL = "gpt-4o-mini"  # OpenAI default
+    DEFAULT_MODEL = "deepseek-v4-pro"  # DeepSeek default
     
     def __init__(self, network_name: str = "default", default_model: Optional[str] = None):
         """Initialize factory with network name.
@@ -122,12 +125,16 @@ class DynamicAgentFactory:
         )
         
         # 3. Create Hermes AIAgent (THE CORE - from run_agent)
+        # Wired to DeepSeek for REAL execution
+        import os
         agent = AIAgent(
-            session_id=name,  # Use session_id as name
+            session_id=name,
             enabled_toolsets=tools,
             ephemeral_system_prompt=prompt,
             max_iterations=max_iterations,
             model=resolved_model,
+            provider="deepseek",
+            api_key=os.getenv("DEEPSEEK_API_KEY") or "sk-dd7cd5f55cdd4959b538aedfa526a37f",
             
             # Callbacks for tracking
             tool_progress_callback=self._on_tool_progress,
