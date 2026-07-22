@@ -31,5 +31,16 @@
     "importance": 0.8,
     "timestamp": 1784708505.9786417,
     "nudged_at": null
+  },
+  {
+    "type": "action",
+    "data": {
+      "action": "agent_created",
+      "result": "completed: joined team track-demo",
+      "iteration": 1
+    },
+    "importance": 0.8,
+    "timestamp": 1784710324.1023355,
+    "nudged_at": null
   }
 ]
