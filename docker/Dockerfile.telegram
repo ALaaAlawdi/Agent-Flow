@@ -1,0 +1,10 @@
+# Agent-Flow Telegram Gateway Dockerfile
+FROM python:3.13-slim
+WORKDIR /app
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/
+ENV PYTHONUNBUFFERED=1 UV_LINK_MODE=copy PATH="/app/.venv/bin:$PATH"
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+COPY agent_flow/ agent_flow/
+RUN uv sync --frozen --no-dev --no-editable
+CMD ["python", "-c", "from agent_flow.agents.telegram_gateway import AgentFlowTelegramBot; import time; bot = AgentFlowTelegramBot(); [bot.poll() or time.sleep(5) for _ in iter(int, 1)]"]

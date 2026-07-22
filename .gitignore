@@ -9,4 +9,5 @@ build/
 *.egg-info/
 .agent-flow/
 demo-artifacts/
+agent_memories/
 .env
