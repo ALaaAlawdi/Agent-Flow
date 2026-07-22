@@ -22,7 +22,7 @@ from agent_flow.agents.hermes_learning_loop import AgentLearningFactory, AgentLe
 def _hermes_chat(prompt: str, timeout: int = 30) -> str:
     """Direct call to Hermes Agent with DeepSeek — returns actual LLM response."""
     env = os.environ.copy()
-    env["DEEPSEEK_API_KEY"] = "sk-dd7cd5f55cdd4959b538aedfa526a37f"
+    env["DEEPSEEK_API_KEY"] = os.getenv("DEEPSEEK_API_KEY", "")
     env["HERMES_DEFAULT_MODEL"] = "deepseek-v4-pro"
     env["HERMES_DEFAULT_PROVIDER"] = "deepseek"
 

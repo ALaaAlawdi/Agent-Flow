@@ -1,107 +1,78 @@
-# ===========================================
-# Agent-Flow — Production Docker Compose
-# ===========================================
-# One command to run everything:
-#   docker compose up -d
-#   → API: http://localhost:8000
-#   → UI:  http://localhost:3000
-# ===========================================
+# Agent-Flow Production Stack
 
+version: "3.8"
 services:
-  # === FastAPI Backend ===
   api:
     build:
       context: .
       dockerfile: docker/Dockerfile.api
-    image: agent-flow-api:latest
     container_name: agent-flow-api
     restart: unless-stopped
     ports:
       - "8000:8000"
-    env_file:
-      - .env
     environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - API_HOST=0.0.0.0
       - API_PORT=8000
-      - DATABASE_URL=sqlite:///data/agent_flow.db
-      - CORS_ORIGINS=${CORS_ORIGINS:-*}
     volumes:
       - agent_flow_data:/app/data
-      - ./vault:/opt/data/hermes-brain/vault:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
     networks:
-      - agent_flow_net
+      - agent_flow
 
-  # === Postgres Database (optional — replace SQLite) ===
-  # Uncomment for production:
-  # db:
-  #   image: postgres:16-alpine
-  #   container_name: agent-flow-db
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_DB: agent_flow
-  #     POSTGRES_USER: agent_flow
-  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   networks:
-  #     - agent_flow_net
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U agent_flow"]
-  #     interval: 10s
-
-  # === Next.js Frontend ===
   ui:
     build:
       context: .
       dockerfile: docker/Dockerfile.ui
       args:
-        - NEXT_PUBLIC_API_URL=http://api:8000
-    image: agent-flow-ui:latest
+        - NEXT_PUBLIC_API_URL=/api
     container_name: agent-flow-ui
     restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
     depends_on:
       api:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000',r=>process.exit(r.statusCode===200?0:1))"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     networks:
-      - agent_flow_net
+      - agent_flow
 
-  # === Nginx Reverse Proxy (optional) ===
-  # Uncomment for production with domain:
-  # proxy:
-  #   image: nginx:alpine
-  #   container_name: agent-flow-proxy
-  #   restart: unless-stopped
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
-  #     - ./docker/ssl:/etc/nginx/ssl:ro
-  #   depends_on:
-  #     - api
-  #     - ui
-  #   networks:
-  #     - agent_flow_net
+  telegram:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.telegram
+    container_name: agent-flow-telegram
+    restart: unless-stopped
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - agent_flow
+
+  watchdog:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: agent-flow-watchdog
+    restart: unless-stopped
+    command: python scripts/watchdog.py
+    environment:
+      - API_URL=http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - agent_flow
 
 volumes:
   agent_flow_data:
-  # postgres_data:
 
 networks:
-  agent_flow_net:
+  agent_flow:
     driver: bridge

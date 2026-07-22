@@ -15,6 +15,11 @@ from agent_flow.agents import AgentTeam, DemoRunner, SCENARIOS
 from agent_flow.agents.world.api import world_router
 from agent_flow.agents.world.hermes_api import router as agentverse_router
 from agent_flow.agents.world.hermes_ui import get_agentverse_ui
+from agent_flow.agents.human_society_api import router as society_router
+from agent_flow.agents.hermes_cli_api import router as hermes_cli_router
+from agent_flow.agents.live_demo import router as live_router
+from agent_flow.agents.collab_demo import router as collab_router
+from agent_flow.agents.agent_brain import router as brain_router
 from hermes_cli.toolset_validation import validate_platform_toolsets
 
 
@@ -104,6 +109,21 @@ app.include_router(world_router)
 
 # Register AgentVerse router (Hermes-powered agents)
 app.include_router(agentverse_router)
+
+# Register Human Society router
+app.include_router(society_router)
+
+# Register Hermes CLI Integration (sessions, kanban, memory, insights, curator)
+app.include_router(hermes_cli_router)
+
+# Register Live Demo
+app.include_router(live_router)
+
+# Register Collaborative Demo (4 agents working together)
+app.include_router(collab_router)
+
+# Register Agent Brain (one gateway, automatic routing)
+app.include_router(brain_router)
 
 # Authentication (optional — enabled if API_KEY is set)
 app.add_middleware(APIKeyAuthMiddleware)
