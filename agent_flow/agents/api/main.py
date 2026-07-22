@@ -16,6 +16,7 @@ from agent_flow.agents.world.api import world_router
 from agent_flow.agents.world.hermes_api import router as agentverse_router
 from agent_flow.agents.world.hermes_ui import get_agentverse_ui
 from agent_flow.agents.human_society_api import router as society_router
+from agent_flow.agents.hermes_cli_api import router as hermes_cli_router
 from hermes_cli.toolset_validation import validate_platform_toolsets
 
 
@@ -108,6 +109,9 @@ app.include_router(agentverse_router)
 
 # Register Human Society router
 app.include_router(society_router)
+
+# Register Hermes CLI Integration (sessions, kanban, memory, insights, curator)
+app.include_router(hermes_cli_router)
 
 # Authentication (optional — enabled if API_KEY is set)
 app.add_middleware(APIKeyAuthMiddleware)

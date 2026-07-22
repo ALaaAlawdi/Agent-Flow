@@ -1,8 +1,9 @@
-import { Bot, Brain, Globe, LayoutDashboard, Play, BarChart3, Settings } from "lucide-react";
+import { Bot, Brain, Globe, LayoutDashboard, Play, BarChart3, Settings, Wrench } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
+  { icon: Wrench, label: "Hermes Tools", href: "/hermes-tools" },
   { icon: Brain, label: "Human Agents", href: "/human-agents" },
   { icon: Brain, label: "Hermes Agents", href: "/hermes-agents" },
   { icon: Globe, label: "AgentVerse", href: "/world" },
