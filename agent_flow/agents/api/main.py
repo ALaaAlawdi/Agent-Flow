@@ -21,6 +21,7 @@ from agent_flow.agents.live_demo import router as live_router
 from agent_flow.agents.collab_demo import router as collab_router
 from agent_flow.agents.agent_brain import router as brain_router
 from agent_flow.agents.stripe_payment import router as billing_router
+from agent_flow.agents.job_hunter import router as job_hunter_router
 from hermes_cli.toolset_validation import validate_platform_toolsets
 
 
@@ -128,6 +129,9 @@ app.include_router(brain_router)
 
 # Register Billing (Stripe payment + usage tracking)
 app.include_router(billing_router)
+
+# Register Job Hunter (automated job applications)
+app.include_router(job_hunter_router)
 
 # Authentication (optional — enabled if API_KEY is set)
 app.add_middleware(APIKeyAuthMiddleware)
