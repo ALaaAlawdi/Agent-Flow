@@ -91,6 +91,13 @@ WORKERS = {
         "specialty": "Pricing hypotheses, unit economics, cost analysis, revenue modeling, market sizing, ROI calculations",
         "can_ask": ["researcher", "skeptic", "archivist"],
     },
+    "redteam": {
+        "name": "Fahad",
+        "role": "Red Team",
+        "tools": ["web"],
+        "specialty": "Adversarial security testing, incentive review, system exploitation, finding vulnerabilities, penetration testing",
+        "can_ask": ["skeptic", "reviewer", "archivist"],
+    },
 }
 
 # Shared conversation history (all agents see this)
@@ -299,6 +306,47 @@ async def brain_history():
     return {
         "total_interactions": len(conversation_history),
         "history": conversation_history[-50:],
+    }
+
+
+@router.post("/handoff")
+async def brain_handoff(task: str = "", from_agent: str = "", to_agent: str = ""):
+    """Agent-to-agent handoff — one agent passes work to another."""
+    if not task or not to_agent:
+        return {"error": "task and to_agent required"}
+    
+    from_name = WORKERS.get(from_agent, {}).get("name", from_agent)
+    to_name = WORKERS.get(to_agent, {}).get("name", to_agent)
+    
+    # Execute on target agent with context
+    response = call_hermes_agent(to_agent, task)
+    
+    conversation_history.append({
+        "type": "handoff",
+        "from": from_name,
+        "to": to_name,
+        "task": task[:80],
+        "response": response[:100],
+        "time": time.time(),
+    })
+    
+    return {
+        "handoff": f"{from_name} → {to_name}",
+        "from": from_agent,
+        "to": to_agent,
+        "response": response[:500],
+    }
+
+
+@router.get("/status")
+async def brain_status():
+    """Live dashboard stats."""
+    return {
+        "agents": len(WORKERS),
+        "agent_list": [{"id": wid, "name": w["name"], "role": w["role"]} for wid, w in WORKERS.items()],
+        "conversations": len(conversation_history),
+        "sessions": len(active_conversations),
+        "constitution_coverage": "10/10" if len(WORKERS) >= 10 else f"{len(WORKERS)}/10",
     }
 
 
