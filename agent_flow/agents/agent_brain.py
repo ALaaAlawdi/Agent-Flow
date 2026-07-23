@@ -33,7 +33,14 @@ WORKERS = {
         "role": "Researcher",
         "tools": ["web"],
         "specialty": "Research, fact-finding, data gathering, analysis",
-        "can_ask": ["coder", "reviewer", "writer"],
+        "can_ask": ["coder", "reviewer", "writer", "skeptic"],
+    },
+    "founder": {
+        "name": "Rashid", 
+        "role": "Founder",
+        "tools": ["web"],
+        "specialty": "Mission thesis, synthesis, capital framing, strategic decisions, team coordination, high-level planning",
+        "can_ask": ["researcher", "coder", "reviewer", "writer", "skeptic", "archivist"],
     },
     "coder": {
         "name": "Noor", 
