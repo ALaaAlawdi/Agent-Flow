@@ -48,6 +48,20 @@ class EventType(Enum):
     WORLD_LOADED = "world_loaded"
 
 
+_QUESTION_BANK: list[str] = [
+    "What do you do here?",
+    "How does this place work?",
+    "What skills do you have?",
+    "Can you teach me something?",
+    "What have you learned recently?",
+    "What's the most interesting thing you know?",
+    "Have you seen anything strange around here?",
+    "Do you know any good places to explore?",
+    "What are you working on?",
+    "Who else should I meet?",
+]
+
+
 @dataclass
 class Position:
     x: float
@@ -302,6 +316,17 @@ class WorldEvent:
         }
 
 
+@dataclass
+class InteractionDelta:
+    """What happened during a single tick — for typed WS event broadcasts."""
+    tick: int
+    greetings: list[dict] = field(default_factory=list)
+    asks: list[dict] = field(default_factory=list)
+    answers: list[dict] = field(default_factory=list)
+    learnings: list[dict] = field(default_factory=list)
+    moves: list[dict] = field(default_factory=list)
+
+
 class WorldEngine:
     """قلب العالم — يدير الوكلاء، الأماكن، الأحداث، والزمن."""
 
@@ -375,45 +400,102 @@ class WorldEngine:
             })
             del self.agents[agent_id]
 
-    async def tick(self):
-        """نبضة العالم — كل نبضة = حركة + حواس + رسائل."""
+    async def tick(self) -> InteractionDelta:
+        """نبضة العالم — تحرك + حواس + محادثات + تعلم. تُرجع InteractionDelta."""
+        import random as _random  # local import to avoid tainting module globals
+
         async with self._lock:
             self.tick_count += 1
+            delta = InteractionDelta(tick=self.tick_count)
 
-            # كل وكيل يتحرك عشوائياً ويستخدم حواسه
-            for agent in self.agents.values():
+            # Snapshot positions for move detection.
+            pre_positions: dict[str, tuple[float, float]] = {
+                aid: (a.position.x, a.position.y) for aid, a in self.agents.items()
+            }
+            # Snapshot per-agent skill count / confidence sum / memory count.
+            pre_learning: dict[str, dict[str, float]] = {
+                aid: {
+                    "skills": len(a.brain.learned_skills),
+                    "confidence_sum": sum(s.confidence for s in a.brain.learned_skills.values()),
+                    "memories": len(a.brain.memories),
+                }
+                for aid, a in self.agents.items()
+            }
+
+            # Each agent acts.
+            for agent in list(self.agents.values()):
                 if agent.state == AgentState.SLEEPING:
                     agent.rest(2)
                     continue
 
-                # يستعيد طاقة
                 agent.rest(0.5)
-
-                # يرى
                 seen = agent.see(self)
-                if seen:
-                    # يتجه لأقرب وكيل أو مكان
-                    for thing in seen:
-                        if thing["type"] == "agent" and thing["distance"] < 20:
-                            # وكيل قريب — يكلمه
-                            msg = agent.speak(
-                                f"Hello {thing['name']}! I'm {agent.name}. Nice to meet you!",
-                                target=thing["id"]
-                            )
-                            self.send_message(msg)
-                            break
-                    else:
-                        # يتجه لأقرب مكان أو وكيل بعيد
-                        nearest = min(seen, key=lambda x: x["distance"])
-                        if nearest["type"] == "location":
-                            target_loc = self.locations.get(nearest["id"])
-                            if target_loc:
-                                agent.move_toward(target_loc.position, speed=3)
+                if not seen:
+                    continue
 
-            # ينظف الرسائل القديمة
+                # First: any agent within 20 units → greet + maybe ask.
+                talked = False
+                for thing in seen:
+                    if thing["type"] != "agent" or thing["distance"] >= 20:
+                        continue
+                    target_id = thing["id"]
+                    target = self.agents.get(target_id)
+                    if not target:
+                        continue
+
+                    # 1. Greet.
+                    greeting = f"Hello {thing['name']}! I'm {agent.name}. Nice to meet you!"
+                    msg = agent.speak(greeting, target=target_id)
+                    self.send_message(msg)
+                    delta.greetings.append({
+                        "from": agent.agent_id, "from_name": agent.name,
+                        "to":   target_id,      "to_name":   thing["name"],
+                        "text": greeting,
+                    })
+                    # Both sides record the meeting → memory delta detected later.
+                    agent.brain.meet_agent(target.agent_id, target.name)
+                    target.brain.meet_agent(agent.agent_id, agent.name)
+                    agent.brain.learn_from_activity("greeting", "success")
+
+                    # 2. Maybe ask a question — curiosity-gated.
+                    curiosity = agent.brain.personality_traits.get("curiosity", 0.5)
+                    if _random.random() < curiosity:
+                        question = _random.choice(_QUESTION_BANK)
+                        delta.asks.append({
+                            "from": agent.agent_id, "from_name": agent.name,
+                            "to":   target_id,      "to_name":   thing["name"],
+                            "text": question,
+                        })
+                        agent.brain.learn_from_activity("asking", "success")
+
+                        # 3. Target answers via existing HermesBrain templated logic.
+                        response = target.brain.process_conversation_turn({
+                            "sender_id":   agent.agent_id,
+                            "sender_name": agent.name,
+                            "content":     question,
+                        })
+                        delta.answers.append({
+                            "from": target_id,      "from_name": target.name,
+                            "to":   agent.agent_id, "to_name":   agent.name,
+                            "text": response,
+                        })
+                        target.brain.learn_from_activity("answering", "success")
+
+                    talked = True
+                    break
+
+                if talked:
+                    continue
+
+                # No one nearby → move toward the nearest location.
+                nearest = min(seen, key=lambda x: x["distance"])
+                if nearest["type"] == "location":
+                    target_loc = self.locations.get(nearest["id"])
+                    if target_loc:
+                        agent.move_toward(target_loc.position, speed=3)
+
+            # Sync hearing states.
             self._clean_old_messages()
-
-            # يخلي الوكلاء يسمعون
             for agent in self.agents.values():
                 heard = agent.hear(self)
                 if heard:
@@ -421,10 +503,55 @@ class WorldEngine:
                 elif agent.state == AgentState.TALKING:
                     agent.state = AgentState.IDLE
 
-            # مزامنة مع الشركات كل 5 نبضات
+            # Compute moves delta.
+            for aid, agent in self.agents.items():
+                pre = pre_positions.get(aid)
+                if pre and (pre[0] != agent.position.x or pre[1] != agent.position.y):
+                    delta.moves.append({
+                        "agent": aid, "agent_name": agent.name,
+                        "from_pos": {"x": pre[0], "y": pre[1]},
+                        "to_pos":   {"x": agent.position.x, "y": agent.position.y},
+                    })
+
+            # Compute learnings delta (skills gained/promoted, new memories).
+            for aid, agent in self.agents.items():
+                pre = pre_learning.get(aid, {"skills": 0, "confidence_sum": 0.0, "memories": 0})
+                cur_skills = len(agent.brain.learned_skills)
+                cur_conf   = sum(s.confidence for s in agent.brain.learned_skills.values())
+                cur_mem    = len(agent.brain.memories)
+
+                if cur_skills > pre["skills"]:
+                    # New skill(s) created.
+                    new_names = list(agent.brain.learned_skills.keys())[pre["skills"]:]
+                    for name in new_names:
+                        sk = agent.brain.learned_skills[name]
+                        delta.learnings.append({
+                            "agent":      aid, "agent_name": agent.name,
+                            "kind_of":    "skill",
+                            "detail":     f"{name} ({sk.confidence:.0%})",
+                        })
+                elif cur_conf > pre["confidence_sum"] + 1e-6:
+                    # Same skills but confidence went up → one learning event summary.
+                    delta.learnings.append({
+                        "agent":      aid, "agent_name": agent.name,
+                        "kind_of":    "skill",
+                        "detail":     f"improved existing skills (+{cur_conf - pre['confidence_sum']:.2f} conf)",
+                    })
+
+                if cur_mem > pre["memories"]:
+                    added = cur_mem - pre["memories"]
+                    delta.learnings.append({
+                        "agent":      aid, "agent_name": agent.name,
+                        "kind_of":    "memory",
+                        "detail":     f"remembers {added} new {'agent' if added == 1 else 'agents'}",
+                    })
+
+            # Company sync every 5 ticks — unchanged.
             if self.tick_count % 5 == 0:
                 from agent_flow.agents.world.company_integration import sync_world_with_companies
                 asyncio.create_task(sync_world_with_companies(self))
+
+            return delta
 
     async def run(self, ticks: int = 10, interval: float = 1.0):
         """تشغيل العالم لعدد من النبضات."""
