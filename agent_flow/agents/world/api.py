@@ -189,7 +189,7 @@ async def world_websocket(websocket: WebSocket, world_name: str):
     ws_manager.register(world_name, websocket)
 
     try:
-        # إرسال الحالة الأولية مع الشركات
+        # Initial world state.
         state = world.get_state()
         state["companies"] = [c.as_dict() for c in company_store.all()]
         await websocket.send_json({
@@ -197,7 +197,24 @@ async def world_websocket(websocket: WebSocket, world_name: str):
             "data": state,
         })
 
-        # استقبال أوامر من الواجهة
+        # Initial ticker status (idle | running | paused).
+        from agent_flow.agents.world.ws import tickers
+        existing = tickers.get(world_name)
+        if existing and existing.is_running():
+            status, pace = "running", existing.pace_seconds
+        elif existing:
+            status, pace = "paused", existing.pace_seconds
+        else:
+            status, pace = "idle", 3.0
+        await websocket.send_json({
+            "type": "world_ticker",
+            "status": status,
+            "pace_seconds": pace,
+        })
+
+        # Command loop.
+        from agent_flow.agents.world.ticker import AutonomousTicker
+
         while True:
             data = await websocket.receive_text()
             try:
@@ -226,13 +243,38 @@ async def world_websocket(websocket: WebSocket, world_name: str):
 
                 elif action == "tick":
                     for _ in range(cmd.get("count", 1)):
-                        await world.tick()
-                    await ws_manager.broadcast(world_name, {
-                        "type": "world_tick",
-                        "data": world.get_state(),
-                    })
+                        delta = await world.tick()
+                        from agent_flow.agents.world.ws import broadcast_delta
+                        await broadcast_delta(world_name, world, delta)
 
-            except (json.JSONDecodeError, KeyError):
+                elif action == "start":
+                    pace = float(cmd.get("pace_seconds", 3.0))
+                    ticker = tickers.get(world_name)
+                    if ticker is None:
+                        ticker = AutonomousTicker(world_name, world, ws_manager, pace_seconds=pace)
+                        tickers[world_name] = ticker
+                    else:
+                        ticker.set_pace(pace)
+                    await ticker.start()
+
+                elif action == "pause":
+                    ticker = tickers.get(world_name)
+                    if ticker:
+                        await ticker.stop()
+
+                elif action == "set_pace":
+                    pace = float(cmd.get("pace_seconds", 3.0))
+                    ticker = tickers.get(world_name)
+                    if ticker:
+                        ticker.set_pace(pace)
+                        # Reflect new pace to all subscribers.
+                        await ws_manager.broadcast(world_name, {
+                            "type": "world_ticker",
+                            "status": "running" if ticker.is_running() else "paused",
+                            "pace_seconds": ticker.pace_seconds,
+                        })
+
+            except (json.JSONDecodeError, KeyError, ValueError):
                 pass
 
     except WebSocketDisconnect:

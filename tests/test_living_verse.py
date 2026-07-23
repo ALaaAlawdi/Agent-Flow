@@ -262,5 +262,63 @@ class AutonomousTickerTests(unittest.TestCase):
             self.assertIn("companies", p["state"])
 
 
+class WebSocketCommandTests(unittest.TestCase):
+    def _client(self):
+        # Import here so failing production import doesn't blow up the whole test file.
+        from fastapi.testclient import TestClient
+        from agent_flow.agents.api.main import app  # type: ignore
+        return TestClient(app)
+
+    def test_connect_sends_world_state_and_ticker_status(self):
+        client = self._client()
+        with client.websocket_connect("/world/test-cmd/ws") as ws:
+            frame1 = ws.receive_json()
+            frame2 = ws.receive_json()
+        # Order isn't strictly guaranteed, but both must appear in the first two frames.
+        types = {frame1["type"], frame2["type"]}
+        self.assertIn("world_state", types)
+        self.assertIn("world_ticker", types)
+
+    def test_start_action_launches_ticker(self):
+        client = self._client()
+        with client.websocket_connect("/world/test-start/ws") as ws:
+            ws.receive_json()  # world_state
+            ws.receive_json()  # world_ticker (idle)
+            ws.send_json({"action": "start", "pace_seconds": 0.05})
+            # Expect at least one world_ticker(status=running) frame in the next few messages.
+            got_running = False
+            for _ in range(10):
+                frame = ws.receive_json()
+                if frame.get("type") == "world_ticker" and frame.get("status") == "running":
+                    got_running = True
+                    break
+            ws.send_json({"action": "pause"})
+        self.assertTrue(got_running)
+
+    def test_set_pace_clamps_and_broadcasts(self):
+        client = self._client()
+        with client.websocket_connect("/world/test-pace/ws") as ws:
+            ws.receive_json()  # world_state
+            ws.receive_json()  # world_ticker (idle)
+            ws.send_json({"action": "start", "pace_seconds": 3.0})
+            # drain until running frame
+            for _ in range(5):
+                f = ws.receive_json()
+                if f.get("type") == "world_ticker" and f.get("status") == "running":
+                    break
+
+            ws.send_json({"action": "set_pace", "pace_seconds": 99.0})
+            frame = None
+            for _ in range(10):
+                f = ws.receive_json()
+                if f.get("type") == "world_ticker" and f.get("pace_seconds") == 10.0:
+                    frame = f
+                    break
+
+            ws.send_json({"action": "pause"})
+
+        self.assertIsNotNone(frame)
+
+
 if __name__ == "__main__":
     unittest.main()
