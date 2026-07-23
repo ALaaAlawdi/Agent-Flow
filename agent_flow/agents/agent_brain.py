@@ -56,6 +56,20 @@ WORKERS = {
         "specialty": "Documentation, explanation, translation, summarization",
         "can_ask": ["researcher", "reviewer"],
     },
+    "skeptic": {
+        "name": "Omar",
+        "role": "Skeptic",
+        "tools": ["web"],
+        "specialty": "Independent falsification, challenging claims, finding flaws, stress-testing ideas",
+        "can_ask": ["researcher", "reviewer", "coder"],
+    },
+    "archivist": {
+        "name": "Maha",
+        "role": "Archivist",
+        "tools": ["file"],
+        "specialty": "Recording lessons, building organizational memory, extracting patterns from history",
+        "can_ask": ["reviewer", "writer"],
+    },
 }
 
 # Shared conversation history (all agents see this)
