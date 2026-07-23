@@ -1,17 +1,20 @@
 """
 Agent-Flow Brain — بوابة واحدة. وكلاء تلقائيون.
 
+V2: Multi-turn conversations + agent handoff + shared memory.
+
 One API endpoint. Agents figure out everything themselves:
 - Who should handle the task
 - When to ask another agent for help
 - When to review each other's work
 - When to learn from mistakes
+- Remembers conversation context across turns
 
 No workflow. No hardcoded steps. Just emergent collaboration.
 """
 
 from __future__ import annotations
-import os, json, time
+import os, json, time, uuid
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
@@ -20,6 +23,9 @@ router = APIRouter(prefix="/brain", tags=["brain"])
 # Force DeepSeek
 os.environ["DEEPSEEK_API_KEY"] = os.getenv("DEEPSEEK_API_KEY", "")
 
+# Session-based conversations (multi-turn memory)
+active_conversations: dict[str, list[dict]] = {}
+
 # Registry of available workers (agents that can be called)
 WORKERS = {
     "researcher": {
@@ -27,7 +33,14 @@ WORKERS = {
         "role": "Researcher",
         "tools": ["web"],
         "specialty": "Research, fact-finding, data gathering, analysis",
-        "can_ask": ["coder", "reviewer", "writer"],
+        "can_ask": ["coder", "reviewer", "writer", "skeptic"],
+    },
+    "founder": {
+        "name": "Rashid", 
+        "role": "Founder",
+        "tools": ["web"],
+        "specialty": "Mission thesis, synthesis, capital framing, strategic decisions, team coordination, high-level planning",
+        "can_ask": ["researcher", "coder", "reviewer", "writer", "skeptic", "archivist"],
     },
     "coder": {
         "name": "Noor", 
@@ -49,6 +62,41 @@ WORKERS = {
         "tools": ["file"],
         "specialty": "Documentation, explanation, translation, summarization",
         "can_ask": ["researcher", "reviewer"],
+    },
+    "skeptic": {
+        "name": "Omar",
+        "role": "Skeptic",
+        "tools": ["web"],
+        "specialty": "Independent falsification, challenging claims, finding flaws, stress-testing ideas",
+        "can_ask": ["researcher", "reviewer", "coder"],
+    },
+    "archivist": {
+        "name": "Maha",
+        "role": "Archivist",
+        "tools": ["file"],
+        "specialty": "Recording lessons, building organizational memory, extracting patterns from history",
+        "can_ask": ["reviewer", "writer"],
+    },
+    "anthropologist": {
+        "name": "Laila",
+        "role": "Anthropologist",
+        "tools": ["web"],
+        "specialty": "Customer pain discovery, buyer research, user interviews, empathy mapping, market psychology",
+        "can_ask": ["researcher", "reviewer", "skeptic"],
+    },
+    "economist": {
+        "name": "Khalid",
+        "role": "Economist",
+        "tools": ["web"],
+        "specialty": "Pricing hypotheses, unit economics, cost analysis, revenue modeling, market sizing, ROI calculations",
+        "can_ask": ["researcher", "skeptic", "archivist"],
+    },
+    "redteam": {
+        "name": "Fahad",
+        "role": "Red Team",
+        "tools": ["web"],
+        "specialty": "Adversarial security testing, incentive review, system exploitation, finding vulnerabilities, penetration testing",
+        "can_ask": ["skeptic", "reviewer", "archivist"],
     },
 }
 
@@ -173,12 +221,132 @@ async def brain_ask(task: str = ""):
     }
 
 
+@router.post("/chat")
+async def brain_chat(session_id: str = "", task: str = ""):
+    """Multi-turn conversation — remembers context across messages."""
+    if not task:
+        return {"error": "No task provided"}
+    
+    if not session_id:
+        session_id = str(uuid.uuid4())[:8]
+    
+    # Initialize or load conversation
+    if session_id not in active_conversations:
+        active_conversations[session_id] = []
+    
+    history = active_conversations[session_id]
+    
+    # Build context from history
+    context = ""
+    if history:
+        last_msgs = history[-4:]  # last 4 turns
+        context = "\nPrevious conversation:\n" + "\n".join([
+            f"User: {h.get('task','')}\nAgent: {h.get('response','')[:80]}" 
+            for h in last_msgs
+        ])
+    
+    # Route task with context
+    routing = ask_all_workers(task)
+    worker_id = routing["assigned_to"]
+    worker = WORKERS[worker_id]
+    
+    # Execute with context
+    full_prompt = task
+    if context:
+        full_prompt = f"{context}\n\nNow: {task}\nReply briefly considering previous context."
+    
+    response = call_hermes_agent(worker_id, full_prompt)
+    
+    # Review
+    review_result = None
+    if worker_id != "reviewer":
+        try:
+            review = call_hermes_agent("reviewer", f"Review in 1 word: {response[:120]}")
+            review_result = review.strip()
+        except:
+            review_result = "skipped"
+    
+    # Save to conversation
+    history.append({
+        "task": task,
+        "agent": worker_id,
+        "name": worker["name"],
+        "response": response[:200],
+        "review": review_result,
+        "time": time.time(),
+    })
+    active_conversations[session_id] = history
+    
+    return {
+        "session_id": session_id,
+        "turn": len(history),
+        "agent": worker["name"],
+        "role": worker["role"],
+        "response": response[:500],
+        "review": review_result,
+        "history_length": len(history),
+    }
+
+
+@router.get("/sessions")
+async def brain_sessions():
+    """List active multi-turn conversations."""
+    return {
+        "sessions": {
+            sid: {"turns": len(h), "last_agent": h[-1]["name"] if h else "?", "last_task": h[-1]["task"][:50] if h else "?"}
+            for sid, h in active_conversations.items() if h
+        },
+        "total": len(active_conversations),
+    }
+
+
 @router.get("/history")
 async def brain_history():
     """Show the full conversation history between agents."""
     return {
         "total_interactions": len(conversation_history),
         "history": conversation_history[-50:],
+    }
+
+
+@router.post("/handoff")
+async def brain_handoff(task: str = "", from_agent: str = "", to_agent: str = ""):
+    """Agent-to-agent handoff — one agent passes work to another."""
+    if not task or not to_agent:
+        return {"error": "task and to_agent required"}
+    
+    from_name = WORKERS.get(from_agent, {}).get("name", from_agent)
+    to_name = WORKERS.get(to_agent, {}).get("name", to_agent)
+    
+    # Execute on target agent with context
+    response = call_hermes_agent(to_agent, task)
+    
+    conversation_history.append({
+        "type": "handoff",
+        "from": from_name,
+        "to": to_name,
+        "task": task[:80],
+        "response": response[:100],
+        "time": time.time(),
+    })
+    
+    return {
+        "handoff": f"{from_name} → {to_name}",
+        "from": from_agent,
+        "to": to_agent,
+        "response": response[:500],
+    }
+
+
+@router.get("/status")
+async def brain_status():
+    """Live dashboard stats."""
+    return {
+        "agents": len(WORKERS),
+        "agent_list": [{"id": wid, "name": w["name"], "role": w["role"]} for wid, w in WORKERS.items()],
+        "conversations": len(conversation_history),
+        "sessions": len(active_conversations),
+        "constitution_coverage": "10/10" if len(WORKERS) >= 10 else f"{len(WORKERS)}/10",
     }
 
 
