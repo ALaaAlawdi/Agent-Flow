@@ -77,6 +77,20 @@ WORKERS = {
         "specialty": "Recording lessons, building organizational memory, extracting patterns from history",
         "can_ask": ["reviewer", "writer"],
     },
+    "anthropologist": {
+        "name": "Laila",
+        "role": "Anthropologist",
+        "tools": ["web"],
+        "specialty": "Customer pain discovery, buyer research, user interviews, empathy mapping, market psychology",
+        "can_ask": ["researcher", "reviewer", "skeptic"],
+    },
+    "economist": {
+        "name": "Khalid",
+        "role": "Economist",
+        "tools": ["web"],
+        "specialty": "Pricing hypotheses, unit economics, cost analysis, revenue modeling, market sizing, ROI calculations",
+        "can_ask": ["researcher", "skeptic", "archivist"],
+    },
 }
 
 # Shared conversation history (all agents see this)
