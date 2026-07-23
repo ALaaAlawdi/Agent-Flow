@@ -163,5 +163,79 @@ class BroadcastDeltaTests(unittest.TestCase):
             ws_module.world_manager.pop("burst-test", None)
 
 
+class AutonomousTickerTests(unittest.TestCase):
+    def test_ticker_start_stop_publishes_status(self):
+        from agent_flow.agents.world.ticker import AutonomousTicker
+
+        world = WorldEngine(name="tick-test", width=300, height=300)
+        _place_two_agents_close(world)
+        fake_mgr = MagicMock()
+        fake_mgr.broadcast = AsyncMock()
+
+        async def run():
+            ticker = AutonomousTicker("tick-test", world, fake_mgr, pace_seconds=0.05)
+            await ticker.start()
+            await asyncio.sleep(0.2)   # let ~3-4 ticks happen
+            await ticker.stop()
+            return ticker
+
+        ticker = asyncio.run(run())
+        self.assertFalse(ticker.is_running())
+
+        types_broadcast = [c.args[1]["type"] for c in fake_mgr.broadcast.await_args_list]
+        # world_ticker frames on start and on stop.
+        ticker_frames = [
+            c.args[1] for c in fake_mgr.broadcast.await_args_list
+            if c.args[1]["type"] == "world_ticker"
+        ]
+        self.assertTrue(any(f["status"] == "running" for f in ticker_frames))
+        self.assertTrue(any(f["status"] == "paused"  for f in ticker_frames))
+        # And at least one world_pulse frame from the ticks that happened.
+        self.assertIn("world_pulse", types_broadcast)
+
+    def test_ticker_set_pace_clamps(self):
+        from agent_flow.agents.world.ticker import AutonomousTicker
+
+        world = WorldEngine(name="pace-test", width=300, height=300)
+        fake_mgr = MagicMock()
+        fake_mgr.broadcast = AsyncMock()
+        ticker = AutonomousTicker("pace-test", world, fake_mgr, pace_seconds=3.0)
+
+        ticker.set_pace(0.5)   # below floor
+        self.assertEqual(ticker.pace_seconds, 1.0)
+        ticker.set_pace(99.0)  # above ceiling
+        self.assertEqual(ticker.pace_seconds, 10.0)
+        ticker.set_pace(4.0)
+        self.assertEqual(ticker.pace_seconds, 4.0)
+
+    def test_ticker_crashes_after_three_failures(self):
+        from agent_flow.agents.world.ticker import AutonomousTicker
+
+        # Broken world: tick() always raises.
+        broken_world = MagicMock()
+        broken_world.tick = AsyncMock(side_effect=RuntimeError("boom"))
+        broken_world.get_state = MagicMock(return_value={"stats": {}, "agents": []})
+
+        fake_mgr = MagicMock()
+        fake_mgr.broadcast = AsyncMock()
+
+        async def run():
+            ticker = AutonomousTicker("crash-test", broken_world, fake_mgr, pace_seconds=0.01)
+            await ticker.start()
+            # Wait long enough for 3 failures + a bit.
+            await asyncio.sleep(0.5)
+            return ticker
+
+        ticker = asyncio.run(run())
+        self.assertFalse(ticker.is_running())
+
+        crashed_frames = [
+            c.args[1] for c in fake_mgr.broadcast.await_args_list
+            if c.args[1].get("type") == "world_ticker" and c.args[1].get("status") == "crashed"
+        ]
+        self.assertTrue(len(crashed_frames) >= 1)
+        self.assertIn("error", crashed_frames[0])
+
+
 if __name__ == "__main__":
     unittest.main()
