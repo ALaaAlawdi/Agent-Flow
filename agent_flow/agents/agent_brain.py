@@ -1,17 +1,20 @@
 """
 Agent-Flow Brain — بوابة واحدة. وكلاء تلقائيون.
 
+V2: Multi-turn conversations + agent handoff + shared memory.
+
 One API endpoint. Agents figure out everything themselves:
 - Who should handle the task
 - When to ask another agent for help
 - When to review each other's work
 - When to learn from mistakes
+- Remembers conversation context across turns
 
 No workflow. No hardcoded steps. Just emergent collaboration.
 """
 
 from __future__ import annotations
-import os, json, time
+import os, json, time, uuid
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
@@ -19,6 +22,9 @@ router = APIRouter(prefix="/brain", tags=["brain"])
 
 # Force DeepSeek
 os.environ["DEEPSEEK_API_KEY"] = os.getenv("DEEPSEEK_API_KEY", "")
+
+# Session-based conversations (multi-turn memory)
+active_conversations: dict[str, list[dict]] = {}
 
 # Registry of available workers (agents that can be called)
 WORKERS = {
@@ -170,6 +176,85 @@ async def brain_ask(task: str = ""):
         "review": review_result,
         "conversation_length": len(conversation_history),
         "available_workers": list(WORKERS.keys()),
+    }
+
+
+@router.post("/chat")
+async def brain_chat(session_id: str = "", task: str = ""):
+    """Multi-turn conversation — remembers context across messages."""
+    if not task:
+        return {"error": "No task provided"}
+    
+    if not session_id:
+        session_id = str(uuid.uuid4())[:8]
+    
+    # Initialize or load conversation
+    if session_id not in active_conversations:
+        active_conversations[session_id] = []
+    
+    history = active_conversations[session_id]
+    
+    # Build context from history
+    context = ""
+    if history:
+        last_msgs = history[-4:]  # last 4 turns
+        context = "\nPrevious conversation:\n" + "\n".join([
+            f"User: {h.get('task','')}\nAgent: {h.get('response','')[:80]}" 
+            for h in last_msgs
+        ])
+    
+    # Route task with context
+    routing = ask_all_workers(task)
+    worker_id = routing["assigned_to"]
+    worker = WORKERS[worker_id]
+    
+    # Execute with context
+    full_prompt = task
+    if context:
+        full_prompt = f"{context}\n\nNow: {task}\nReply briefly considering previous context."
+    
+    response = call_hermes_agent(worker_id, full_prompt)
+    
+    # Review
+    review_result = None
+    if worker_id != "reviewer":
+        try:
+            review = call_hermes_agent("reviewer", f"Review in 1 word: {response[:120]}")
+            review_result = review.strip()
+        except:
+            review_result = "skipped"
+    
+    # Save to conversation
+    history.append({
+        "task": task,
+        "agent": worker_id,
+        "name": worker["name"],
+        "response": response[:200],
+        "review": review_result,
+        "time": time.time(),
+    })
+    active_conversations[session_id] = history
+    
+    return {
+        "session_id": session_id,
+        "turn": len(history),
+        "agent": worker["name"],
+        "role": worker["role"],
+        "response": response[:500],
+        "review": review_result,
+        "history_length": len(history),
+    }
+
+
+@router.get("/sessions")
+async def brain_sessions():
+    """List active multi-turn conversations."""
+    return {
+        "sessions": {
+            sid: {"turns": len(h), "last_agent": h[-1]["name"] if h else "?", "last_task": h[-1]["task"][:50] if h else "?"}
+            for sid, h in active_conversations.items() if h
+        },
+        "total": len(active_conversations),
     }
 
 
