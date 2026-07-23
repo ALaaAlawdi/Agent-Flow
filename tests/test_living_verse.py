@@ -77,5 +77,39 @@ class InteractionDeltaTests(unittest.TestCase):
         self.assertTrue(len(delta.moves) + len(delta.greetings) >= 1)
 
 
+class StateEnrichmentTests(unittest.TestCase):
+    def test_agent_dict_includes_brain_snapshot(self):
+        world = WorldEngine(name="test", width=300, height=300)
+        a = WorldAgent("agent-x", "Xin", Position(50, 50), skills=["exploring"])
+        world.spawn_agent(a)
+
+        d = a.as_dict()
+        self.assertIn("brain", d)
+        brain = d["brain"]
+        self.assertIn("role", brain)
+        self.assertIn("personality", brain)
+        self.assertIn("skills", brain)  # list of {name, confidence, times_used}
+        self.assertIsInstance(brain["skills"], list)
+        self.assertIn("memory_count", brain)
+        self.assertIn("knowledge_recent", brain)
+        self.assertIn("questions_asked", brain)
+        self.assertIn("questions_answered", brain)
+
+    def test_get_state_stats_include_totals(self):
+        world = WorldEngine(name="test", width=300, height=300)
+        a1 = WorldAgent("a", "A", Position(100, 100), skills=["writing"])
+        a2 = WorldAgent("b", "B", Position(110, 100), skills=["coding"])
+        world.spawn_agent(a1)
+        world.spawn_agent(a2)
+
+        asyncio.run(world.tick())
+        state = world.get_state()
+        stats = state["stats"]
+        self.assertIn("total_interactions", stats)
+        self.assertIn("total_learnings", stats)
+        self.assertGreaterEqual(stats["total_interactions"], 1)
+        self.assertGreaterEqual(stats["total_learnings"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

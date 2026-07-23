@@ -249,6 +249,10 @@ class WorldAgent:
         return self.position
 
     def as_dict(self) -> dict:
+        top_skills = sorted(
+            self.brain.learned_skills.values(),
+            key=lambda s: (-s.confidence, -s.times_used),
+        )[:3]
         return {
             "agent_id": self.agent_id,
             "name": self.name,
@@ -264,6 +268,26 @@ class WorldAgent:
             "current_location": self.current_location,
             "memory_count": len(self.memory),
             "created_at": self.created_at,
+            "brain": {
+                "role": self.brain.discover_role(),
+                "personality": {
+                    "curiosity":    round(self.brain.personality_traits.get("curiosity", 0.0), 2),
+                    "talkativity":  round(self.brain.personality_traits.get("sociability", 0.0), 2),
+                    "friendliness": round(self.brain.personality_traits.get("generosity", 0.0), 2),
+                },
+                "skills": [
+                    {"name": s.name, "confidence": round(s.confidence, 2), "times_used": s.times_used}
+                    for s in top_skills
+                ],
+                "memory_count": len(self.brain.memories),
+                "knowledge_recent": [
+                    m.entity_name for m in list(self.brain.memories.values())[-3:]
+                ],
+                "questions_asked": self.brain.learned_skills.get("asking").times_used
+                    if "asking" in self.brain.learned_skills else 0,
+                "questions_answered": self.brain.learned_skills.get("answering").times_used
+                    if "answering" in self.brain.learned_skills else 0,
+            },
         }
 
 
@@ -339,6 +363,7 @@ class WorldEngine:
         self.active_messages: list[Message] = []
         self.events: list[WorldEvent] = []
         self.tick_count = 0
+        self._total_learnings = 0
         self.created_at = time.time()
         self.running = False
         self._lock = asyncio.Lock()
@@ -530,6 +555,7 @@ class WorldEngine:
                             "kind_of":    "skill",
                             "detail":     f"{name} ({sk.confidence:.0%})",
                         })
+                        self._total_learnings += 1
                 elif cur_conf > pre["confidence_sum"] + 1e-6:
                     # Same skills but confidence went up → one learning event summary.
                     delta.learnings.append({
@@ -537,6 +563,7 @@ class WorldEngine:
                         "kind_of":    "skill",
                         "detail":     f"improved existing skills (+{cur_conf - pre['confidence_sum']:.2f} conf)",
                     })
+                    self._total_learnings += 1
 
                 if cur_mem > pre["memories"]:
                     added = cur_mem - pre["memories"]
@@ -545,6 +572,7 @@ class WorldEngine:
                         "kind_of":    "memory",
                         "detail":     f"remembers {added} new {'agent' if added == 1 else 'agents'}",
                     })
+                    self._total_learnings += 1
 
             # Company sync every 5 ticks — unchanged.
             if self.tick_count % 5 == 0:
@@ -580,6 +608,8 @@ class WorldEngine:
                 "total_events": len(self.events),
                 "active_messages": len(self.active_messages),
                 "uptime_seconds": round(time.time() - self.created_at, 1),
+                "total_interactions": sum(a.brain.total_interactions for a in self.agents.values()),
+                "total_learnings": self._total_learnings,
             },
         }
 
