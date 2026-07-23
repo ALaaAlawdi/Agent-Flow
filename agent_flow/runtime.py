@@ -591,6 +591,38 @@ class CompanyRuntime:
             ],
         }
 
+    def list_missions(self) -> list[dict]:
+        with self._connect() as connection:
+            mission_rows = connection.execute(
+                "SELECT * FROM missions ORDER BY created_at DESC, id DESC"
+            ).fetchall()
+            task_rows = connection.execute(
+                "SELECT mission_id, status FROM tasks ORDER BY mission_id, position"
+            ).fetchall()
+
+        counts: dict[str, dict[str, int]] = {}
+        for task in task_rows:
+            mission_counts = counts.setdefault(task["mission_id"], {"blocked": 0, "ready": 0, "done": 0})
+            if task["status"] in mission_counts:
+                mission_counts[task["status"]] += 1
+
+        missions = []
+        for mission in mission_rows:
+            missions.append(
+                {
+                    "id": mission["id"],
+                    "title": mission["title"],
+                    "brief": mission["brief"],
+                    "risk": mission["risk"],
+                    "status": mission["status"],
+                    "budget_total": mission["budget_total"],
+                    "budget_spent": mission["budget_spent"],
+                    "created_at": mission["created_at"],
+                    "task_counts": counts.get(mission["id"], {"blocked": 0, "ready": 0, "done": 0}),
+                }
+            )
+        return missions
+
     def list_agents(self) -> list[dict]:
         with self._connect() as connection:
             rows = connection.execute(

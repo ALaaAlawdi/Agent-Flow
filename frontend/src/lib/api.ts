@@ -11,6 +11,49 @@ export type Memory = { key: string; value: string; timestamp: string; };
 export type Interaction = { interaction_id: string; type: string; source: string | null; target: string | null; summary: string; timestamp: string; data: Record<string, unknown>; };
 export type Conversation = { id: string; participants: string[]; messages: { role: string; content: string }[]; };
 export type Workflow = { id: string; name: string; steps: number; status: string; };
+export type MissionTask = {
+  id: string;
+  title: string;
+  capability: string;
+  depends_on: string[];
+  cost: number;
+  independent_review: boolean;
+  human_only: boolean;
+  status: "blocked" | "ready" | "done";
+  assigned_agent: string | null;
+  evidence: { artifact: string; verification: string; summary: string; decision?: string } | null;
+};
+export type MissionSummary = {
+  id: string;
+  title: string;
+  brief: string;
+  risk: "low" | "medium" | "high" | "critical";
+  status: string;
+  budget_total: number;
+  budget_spent: number;
+  created_at: string;
+  task_counts: { blocked: number; ready: number; done: number };
+};
+export type MissionDetail = MissionSummary & { tasks: MissionTask[] };
+export type MissionPacket = {
+  mission_id: string;
+  task_id: string;
+  worker_id: string;
+  objective: string;
+  mission_context: { title: string; brief: string; risk: string };
+  budget: { credits: number };
+  input_artifacts: string[];
+  acceptance_criteria: string[];
+  evidence_contract: string[];
+  decision_options: string[];
+};
+export type CompanyEvent = {
+  id: number;
+  occurred_at: string;
+  type: string;
+  actor: string;
+  payload: Record<string, unknown>;
+};
 
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -33,6 +76,22 @@ export const api = {
   listScenarios: () => fetchApi<{ scenarios: Scenario[] }>("/scenarios"),
   getScenario: (id: string) => fetchApi<Scenario & { team_config: Record<string, unknown> }>(`/scenarios/${id}`),
   runScenario: (id: string) => fetchApi<ScenarioResult>(`/scenarios/${id}/run`, { method: "POST" }),
+
+  // Company Runtime
+  listMissions: () => fetchApi<{ missions: MissionSummary[] }>("/missions"),
+  createMission: (payload: { title: string; brief: string; budget: number; risk: MissionSummary["risk"] }) =>
+    fetchApi<{ mission_id: string; mission: MissionDetail }>("/missions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getMission: (missionId: string) => fetchApi<MissionDetail>(`/missions/${missionId}`),
+  formMissionSquad: (missionId: string) =>
+    fetchApi<{ mission_id: string; assignments: Record<string, string>; mission: MissionDetail }>(
+      `/missions/${missionId}/form-squad`,
+      { method: "POST" },
+    ),
+  getMissionPackets: (missionId: string) => fetchApi<{ mission_id: string; packets: MissionPacket[] }>(`/missions/${missionId}/packets`),
+  getCompanyEvents: () => fetchApi<{ events: CompanyEvent[] }>("/company/events"),
 
   // Teams
   listTeams: () => fetchApi<{ teams: Team[] }>("/teams"),

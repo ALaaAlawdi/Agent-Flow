@@ -1,0 +1,174 @@
+{
+  "company": {
+    "name": "Agent-Flow",
+    "tagline": "AI company operating system staffed by agents",
+    "source": "Agent-Flow",
+    "exported_at": "2026-07-23T22:05:18.745154+00:00",
+    "alook_ready": true
+  },
+  "org_chart": [
+    {
+      "id": "researcher",
+      "name": "Zain",
+      "role": "Researcher",
+      "specialty": "Research, fact-finding, data gathering, analysis",
+      "tools": [
+        "web"
+      ],
+      "reports_to": "founder",
+      "can_collaborate_with": [
+        "coder",
+        "reviewer",
+        "writer",
+        "skeptic"
+      ]
+    },
+    {
+      "id": "founder",
+      "name": "Rashid",
+      "role": "Founder",
+      "specialty": "Mission thesis, synthesis, capital framing, strategic decisions, team coordination, high-level planning",
+      "tools": [
+        "web"
+      ],
+      "reports_to": null,
+      "can_collaborate_with": [
+        "researcher",
+        "coder",
+        "reviewer",
+        "writer",
+        "skeptic",
+        "archivist"
+      ]
+    },
+    {
+      "id": "coder",
+      "name": "Noor",
+      "role": "Developer",
+      "specialty": "Coding, debugging, scripting, algorithms",
+      "tools": [
+        "file"
+      ],
+      "reports_to": "founder",
+      "can_collaborate_with": [
+        "researcher",
+        "reviewer"
+      ]
+    },
+    {
+      "id": "reviewer",
+      "name": "Sara",
+      "role": "Reviewer",
+      "specialty": "Code review, correctness checking, bug finding, quality assurance",
+      "tools": [
+        "web",
+        "file"
+      ],
+      "reports_to": "founder",
+      "can_collaborate_with": [
+        "researcher",
+        "coder"
+      ]
+    },
+    {
+      "id": "writer",
+      "name": "Nader",
+      "role": "Writer",
+      "specialty": "Documentation, explanation, translation, summarization",
+      "tools": [
+        "file"
+      ],
+      "reports_to": "founder",
+      "can_collaborate_with": [
+        "researcher",
+        "reviewer"
+      ]
+    },
+    {
+      "id": "skeptic",
+      "name": "Omar",
+      "role": "Skeptic",
+      "specialty": "Independent falsification, challenging claims, finding flaws, stress-testing ideas",
+      "tools": [
+        "web"
+      ],
+      "reports_to": "founder",
+      "can_collaborate_with": [
+        "researcher",
+        "reviewer",
+        "coder"
+      ]
+    },
+    {
+      "id": "archivist",
+      "name": "Maha",
+      "role": "Archivist",
+      "specialty": "Recording lessons, building organizational memory, extracting patterns from history",
+      "tools": [
+        "file"
+      ],
+      "reports_to": "founder",
+      "can_collaborate_with": [
+        "reviewer",
+        "writer"
+      ]
+    },
+    {
+      "id": "anthropologist",
+      "name": "Laila",
+      "role": "Anthropologist",
+      "specialty": "Customer pain discovery, buyer research, user interviews, empathy mapping, market psychology",
+      "tools": [
+        "web"
+      ],
+      "reports_to": "founder",
+      "can_collaborate_with": [
+        "researcher",
+        "reviewer",
+        "skeptic"
+      ]
+    },
+    {
+      "id": "economist",
+      "name": "Khalid",
+      "role": "Economist",
+      "specialty": "Pricing hypotheses, unit economics, cost analysis, revenue modeling, market sizing, ROI calculations",
+      "tools": [
+        "web"
+      ],
+      "reports_to": "founder",
+      "can_collaborate_with": [
+        "researcher",
+        "skeptic",
+        "archivist"
+      ]
+    },
+    {
+      "id": "redteam",
+      "name": "Fahad",
+      "role": "Red Team",
+      "specialty": "Adversarial security testing, incentive review, system exploitation, finding vulnerabilities, penetration testing",
+      "tools": [
+        "web"
+      ],
+      "reports_to": "founder",
+      "can_collaborate_with": [
+        "skeptic",
+        "reviewer",
+        "archivist"
+      ]
+    }
+  ],
+  "runtime": {
+    "brain_agents": 10,
+    "provider_neutral": true,
+    "local_first": true,
+    "recommended_entrypoints": [
+      "Founder",
+      "Researcher",
+      "Reviewer",
+      "Red Team",
+      "Archivist"
+    ]
+  }
+}

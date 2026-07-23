@@ -22,6 +22,8 @@ from agent_flow.agents.collab_demo import router as collab_router
 from agent_flow.agents.agent_brain import router as brain_router
 from agent_flow.agents.stripe_payment import router as billing_router
 from agent_flow.agents.job_hunter import router as job_hunter_router
+from agent_flow.agents.alook_integration import router as alook_router
+from agent_flow.agents.company_api import router as company_router
 from hermes_cli.toolset_validation import validate_platform_toolsets
 
 
@@ -132,6 +134,12 @@ app.include_router(billing_router)
 
 # Register Job Hunter (automated job applications)
 app.include_router(job_hunter_router)
+
+# Register Alook integration
+app.include_router(alook_router)
+
+# Register deterministic company runtime control-room API
+app.include_router(company_router)
 
 # Authentication (optional — enabled if API_KEY is set)
 app.add_middleware(APIKeyAuthMiddleware)

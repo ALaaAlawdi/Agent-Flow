@@ -1,14 +1,16 @@
 "use client";
 
-import { Bot, Brain, Globe, LayoutDashboard, Play, BarChart3, Settings, Wrench, Menu, X } from "lucide-react";
+import { Bot, Brain, Globe, LayoutDashboard, Play, BarChart3, Settings, Wrench, Menu, X, BriefcaseBusiness } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
+  { icon: Wrench, label: "Alook", href: "/alook" },
   { icon: Wrench, label: "Job Hunter", href: "/job-hunter" },
   { icon: Wrench, label: "Brain Chat", href: "/brain-chat" },
   { icon: Wrench, label: "Hermes Tools", href: "/hermes-tools" },
+  { icon: BriefcaseBusiness, label: "Missions", href: "/missions" },
   { icon: Brain, label: "Human Agents", href: "/human-agents" },
   { icon: Brain, label: "Hermes Agents", href: "/hermes-agents" },
   { icon: Globe, label: "AgentVerse", href: "/world" },
