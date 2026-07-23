@@ -236,6 +236,31 @@ class AutonomousTickerTests(unittest.TestCase):
         self.assertTrue(len(crashed_frames) >= 1)
         self.assertIn("error", crashed_frames[0])
 
+    def test_ticker_world_pulse_includes_companies(self):
+        from agent_flow.agents.world.ticker import AutonomousTicker
+
+        world = WorldEngine(name="companies-test", width=300, height=300)
+        _place_two_agents_close(world)
+        fake_mgr = MagicMock()
+        fake_mgr.broadcast = AsyncMock()
+
+        async def run():
+            ticker = AutonomousTicker("companies-test", world, fake_mgr, pace_seconds=0.05)
+            await ticker.start()
+            await asyncio.sleep(0.15)
+            await ticker.stop()
+            return fake_mgr
+
+        mgr = asyncio.run(run())
+        pulse_frames = [
+            c.args[1] for c in mgr.broadcast.await_args_list
+            if c.args[1].get("type") == "world_pulse"
+        ]
+        self.assertTrue(len(pulse_frames) >= 1)
+        # Every world_pulse payload's state MUST include a companies key (may be empty list).
+        for p in pulse_frames:
+            self.assertIn("companies", p["state"])
+
 
 if __name__ == "__main__":
     unittest.main()

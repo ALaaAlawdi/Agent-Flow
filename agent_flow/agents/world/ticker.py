@@ -10,8 +10,11 @@ import asyncio
 import logging
 from typing import Optional
 
-from agent_flow.agents.world.engine import InteractionDelta, WorldEngine
-from agent_flow.agents.world.ws import WorldWebSocketManager
+from agent_flow.agents.world.engine import WorldEngine
+from agent_flow.agents.world.ws import (
+    WorldWebSocketManager,
+    broadcast_delta,
+)
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +79,7 @@ class AutonomousTicker:
         while not self._stop.is_set():
             try:
                 delta = await self._world.tick()
-                await self._broadcast_delta(delta)
+                await broadcast_delta(self._world_name, self._world, delta, manager=self._ws)
                 consecutive_failures = 0
             except Exception as exc:  # noqa: BLE001 — resilient background loop
                 consecutive_failures += 1
@@ -90,51 +93,6 @@ class AutonomousTicker:
                 continue
 
             await self._sleep(self._pace)
-
-    async def _broadcast_delta(self, delta: InteractionDelta) -> None:
-        """Broadcast each interaction event plus a world_pulse rollup via self._ws."""
-        wn = self._world_name
-        for i, m in enumerate(delta.moves):
-            await self._ws.broadcast(wn, {
-                "type": "agent_moved",
-                "id": f"mv_{delta.tick:05d}_{i}",
-                **m,
-                "tick": delta.tick,
-            })
-        for i, g in enumerate(delta.greetings):
-            await self._ws.broadcast(wn, {
-                "type": "agent_greeted",
-                "id": f"grt_{delta.tick:05d}_{i}",
-                **g,
-                "tick": delta.tick,
-            })
-        for i, a in enumerate(delta.asks):
-            await self._ws.broadcast(wn, {
-                "type": "agent_asked",
-                "id": f"ask_{delta.tick:05d}_{i}",
-                **a,
-                "tick": delta.tick,
-            })
-        for i, a in enumerate(delta.answers):
-            await self._ws.broadcast(wn, {
-                "type": "agent_answered",
-                "id": f"ans_{delta.tick:05d}_{i}",
-                **a,
-                "tick": delta.tick,
-            })
-        for i, L in enumerate(delta.learnings):
-            await self._ws.broadcast(wn, {
-                "type": "agent_learned",
-                "id": f"lrn_{delta.tick:05d}_{i}",
-                **L,
-                "tick": delta.tick,
-            })
-        state = self._world.get_state()
-        await self._ws.broadcast(wn, {
-            "type": "world_pulse",
-            "tick": delta.tick,
-            "state": state,
-        })
 
     async def _sleep(self, seconds: float) -> None:
         """Sleep interruptibly — returns immediately if _stop is set."""

@@ -65,47 +65,54 @@ def _pulse_payload(world: WorldEngine, tick: int) -> dict:
     return {"type": "world_pulse", "tick": tick, "state": state}
 
 
-async def broadcast_delta(world_name: str, world: WorldEngine, delta: InteractionDelta) -> None:
+async def broadcast_delta(
+    world_name: str,
+    world: WorldEngine,
+    delta: InteractionDelta,
+    manager: "WorldWebSocketManager | None" = None,
+) -> None:
     """Send one WS frame per interaction, plus a rollup world_pulse.
 
     Order: moves → greetings → asks → answers → learnings → world_pulse.
+    If ``manager`` is None, uses the module-level ``ws_manager``.
     """
+    mgr = manager if manager is not None else ws_manager
     for i, m in enumerate(delta.moves):
-        await ws_manager.broadcast(world_name, {
+        await mgr.broadcast(world_name, {
             "type": "agent_moved",
             "id": f"mv_{delta.tick:05d}_{i}",
             **m,
             "tick": delta.tick,
         })
     for i, g in enumerate(delta.greetings):
-        await ws_manager.broadcast(world_name, {
+        await mgr.broadcast(world_name, {
             "type": "agent_greeted",
             "id": f"grt_{delta.tick:05d}_{i}",
             **g,
             "tick": delta.tick,
         })
     for i, a in enumerate(delta.asks):
-        await ws_manager.broadcast(world_name, {
+        await mgr.broadcast(world_name, {
             "type": "agent_asked",
             "id": f"ask_{delta.tick:05d}_{i}",
             **a,
             "tick": delta.tick,
         })
     for i, a in enumerate(delta.answers):
-        await ws_manager.broadcast(world_name, {
+        await mgr.broadcast(world_name, {
             "type": "agent_answered",
             "id": f"ans_{delta.tick:05d}_{i}",
             **a,
             "tick": delta.tick,
         })
     for i, L in enumerate(delta.learnings):
-        await ws_manager.broadcast(world_name, {
+        await mgr.broadcast(world_name, {
             "type": "agent_learned",
             "id": f"lrn_{delta.tick:05d}_{i}",
             **L,
             "tick": delta.tick,
         })
-    await ws_manager.broadcast(world_name, _pulse_payload(world, delta.tick))
+    await mgr.broadcast(world_name, _pulse_payload(world, delta.tick))
 
 
 async def run_world_ticks(world_name: str, ticks: int = 20, interval: float = 2.0):
