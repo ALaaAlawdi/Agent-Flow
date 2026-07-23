@@ -8,6 +8,7 @@ in a way that is ready to connect to Alook locally.
 from __future__ import annotations
 
 import json
+import socket
 import subprocess
 import urllib.request
 from datetime import datetime, timezone
@@ -37,6 +38,14 @@ def _http_ok(url: str) -> bool:
     try:
         with urllib.request.urlopen(url, timeout=3) as r:
             return 200 <= r.status < 500
+    except Exception:
+        return False
+
+
+def _port_open(host: str, port: int) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=2):
+            return True
     except Exception:
         return False
 
@@ -87,13 +96,15 @@ async def alook_status():
     return {
         "cli_available": code == 0,
         "cli_version": version if code == 0 else None,
-        "web_running": _http_ok("http://localhost:15210"),
-        "email_worker_running": _http_ok("http://localhost:15211"),
-        "ws_worker_running": _http_ok("http://localhost:15212"),
+        "web_running": _port_open("127.0.0.1", 15210),
+        "email_worker_running": _port_open("127.0.0.1", 15211),
+        "ws_worker_running": _port_open("127.0.0.1", 15212),
+        "web_http_ready": _http_ok("http://localhost:15210"),
         "export_file": str(EXPORT_FILE),
         "export_exists": EXPORT_FILE.exists(),
         "brain_agents": len(WORKERS),
         "constitution_coverage": "10/10" if len(WORKERS) >= 10 else f"{len(WORKERS)}/10",
+        "note": "onboard failed during migrations, but local services may still be startable if the DB was already initialized",
     }
 
 
