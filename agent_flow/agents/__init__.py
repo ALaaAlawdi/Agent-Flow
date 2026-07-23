@@ -63,6 +63,11 @@ from .interactions import (
 )
 from .persistence import PersistenceManager, AutoPersistence
 from .demo_scenarios import SCENARIOS, DemoRunner, DemoScenario
+from .employee import (
+    EmployeeAgent, EmployeeTeam, EmployeeIdentity, Coworker,
+    ConsultationRequest, ConsultationResponse, TaskEvidence,
+    LoopState, AssessResult,
+)
 
 __all__ = [
     # Core
@@ -202,4 +207,14 @@ __all__ = [
     "SCENARIOS",
     "DemoRunner",
     "DemoScenario",
+    # Employee Protocol
+    "EmployeeAgent",
+    "EmployeeTeam",
+    "EmployeeIdentity",
+    "Coworker",
+    "ConsultationRequest",
+    "ConsultationResponse",
+    "TaskEvidence",
+    "LoopState",
+    "AssessResult",
 ]
