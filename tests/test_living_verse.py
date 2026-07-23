@@ -2,8 +2,9 @@
 
 import asyncio
 import unittest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+from agent_flow.agents.world import ws as ws_module
 from agent_flow.agents.world.engine import (
     AgentState, InteractionDelta, Position, WorldAgent, WorldEngine,
 )
@@ -109,6 +110,57 @@ class StateEnrichmentTests(unittest.TestCase):
         self.assertIn("total_learnings", stats)
         self.assertGreaterEqual(stats["total_interactions"], 1)
         self.assertGreaterEqual(stats["total_learnings"], 1)
+
+
+class BroadcastDeltaTests(unittest.TestCase):
+    def test_broadcast_delta_emits_typed_events_in_order(self):
+        world = WorldEngine(name="test", width=300, height=300)
+        _place_two_agents_close(world)
+
+        async def run():
+            delta = await world.tick()
+            fake_mgr = MagicMock()
+            fake_mgr.broadcast = AsyncMock()
+            # Patch the module-level ws_manager used inside broadcast_delta.
+            with patch.object(ws_module, "ws_manager", fake_mgr):
+                await ws_module.broadcast_delta("test", world, delta)
+            return fake_mgr
+
+        mgr = asyncio.run(run())
+        calls = mgr.broadcast.await_args_list
+
+        # Every call is (world_name, dict-with-'type').
+        types_broadcast = [c.args[1]["type"] for c in calls]
+
+        # We expect a world_pulse at the end, and at least one interaction event before it.
+        self.assertEqual(types_broadcast[-1], "world_pulse")
+        self.assertTrue(any(t == "agent_greeted" for t in types_broadcast))
+
+        # world_pulse payload must include tick + state.agents (from get_state).
+        pulse_payload = calls[-1].args[1]
+        self.assertIn("tick", pulse_payload)
+        self.assertIn("state", pulse_payload)
+        self.assertIn("agents", pulse_payload["state"])
+
+    def test_run_world_ticks_broadcasts_delta_events(self):
+        """Backward-compat: the old ``Burst 60'' code path must also emit typed events."""
+        world = WorldEngine.create_default_world()
+        # Register the world in the manager dict so run_world_ticks finds it.
+        ws_module.world_manager["burst-test"] = world
+
+        try:
+            async def run():
+                fake_mgr = MagicMock()
+                fake_mgr.broadcast = AsyncMock()
+                with patch.object(ws_module, "ws_manager", fake_mgr):
+                    await ws_module.run_world_ticks("burst-test", ticks=2, interval=0.01)
+                return fake_mgr
+
+            mgr = asyncio.run(run())
+            types_broadcast = [c.args[1]["type"] for c in mgr.broadcast.await_args_list]
+            self.assertIn("world_pulse", types_broadcast)
+        finally:
+            ws_module.world_manager.pop("burst-test", None)
 
 
 if __name__ == "__main__":
