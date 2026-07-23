@@ -1,199 +1,165 @@
 warning: `VIRTUAL_ENV=C:\Users\a_a\AppData\Local\Programs\Python\Python312` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
-INFO:     Started server process [18180]
+INFO:     Started server process [9876]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:58186 - "WebSocket /world/agentverse/ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:58187 - "WebSocket /world/agentverse/ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:58425 - "WebSocket /world/agentverse/ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:58426 - "WebSocket /world/agentverse/ws" [accepted]
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52665 - "WebSocket /world/agentverse/ws" [accepted]
 INFO:     connection open
 Task exception was never retrieved
-future: <Task finished name='Task-82' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-11' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-83' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-12' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-84' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-13' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-85' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-14' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-86' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-15' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-87' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-16' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-88' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-17' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-89' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-18' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-90' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-19' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-91' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-20' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-92' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-21' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-93' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-22' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-94' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-23' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
 Task exception was never retrieved
-future: <Task finished name='Task-95' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+future: <Task finished name='Task-24' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
 Traceback (most recent call last):
   File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
     await ws_manager.broadcast(world.world_name or "agentverse", {
                                ^^^^^^^^^^^^^^^^
 AttributeError: 'WorldEngine' object has no attribute 'world_name'
-Task exception was never retrieved
-future: <Task finished name='Task-96' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
+ERROR:    Exception in ASGI application
 Traceback (most recent call last):
-  File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
-    await ws_manager.broadcast(world.world_name or "agentverse", {
-                               ^^^^^^^^^^^^^^^^
-AttributeError: 'WorldEngine' object has no attribute 'world_name'
-Task exception was never retrieved
-future: <Task finished name='Task-97' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
-Traceback (most recent call last):
-  File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
-    await ws_manager.broadcast(world.world_name or "agentverse", {
-                               ^^^^^^^^^^^^^^^^
-AttributeError: 'WorldEngine' object has no attribute 'world_name'
-Task exception was never retrieved
-future: <Task finished name='Task-98' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
-Traceback (most recent call last):
-  File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
-    await ws_manager.broadcast(world.world_name or "agentverse", {
-                               ^^^^^^^^^^^^^^^^
-AttributeError: 'WorldEngine' object has no attribute 'world_name'
-Task exception was never retrieved
-future: <Task finished name='Task-99' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
-Traceback (most recent call last):
-  File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
-    await ws_manager.broadcast(world.world_name or "agentverse", {
-                               ^^^^^^^^^^^^^^^^
-AttributeError: 'WorldEngine' object has no attribute 'world_name'
-Task exception was never retrieved
-future: <Task finished name='Task-100' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
-Traceback (most recent call last):
-  File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
-    await ws_manager.broadcast(world.world_name or "agentverse", {
-                               ^^^^^^^^^^^^^^^^
-AttributeError: 'WorldEngine' object has no attribute 'world_name'
-Task exception was never retrieved
-future: <Task finished name='Task-101' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
-Traceback (most recent call last):
-  File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
-    await ws_manager.broadcast(world.world_name or "agentverse", {
-                               ^^^^^^^^^^^^^^^^
-AttributeError: 'WorldEngine' object has no attribute 'world_name'
-Task exception was never retrieved
-future: <Task finished name='Task-102' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
-Traceback (most recent call last):
-  File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
-    await ws_manager.broadcast(world.world_name or "agentverse", {
-                               ^^^^^^^^^^^^^^^^
-AttributeError: 'WorldEngine' object has no attribute 'world_name'
-Task exception was never retrieved
-future: <Task finished name='Task-103' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
-Traceback (most recent call last):
-  File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
-    await ws_manager.broadcast(world.world_name or "agentverse", {
-                               ^^^^^^^^^^^^^^^^
-AttributeError: 'WorldEngine' object has no attribute 'world_name'
-Task exception was never retrieved
-future: <Task finished name='Task-104' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
-Traceback (most recent call last):
-  File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
-    await ws_manager.broadcast(world.world_name or "agentverse", {
-                               ^^^^^^^^^^^^^^^^
-AttributeError: 'WorldEngine' object has no attribute 'world_name'
-Task exception was never retrieved
-future: <Task finished name='Task-105' coro=<sync_world_with_companies() done, defined at E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py:201> exception=AttributeError("'WorldEngine' object has no attribute 'world_name'")>
-Traceback (most recent call last):
-  File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\company_integration.py", line 232, in sync_world_with_companies
-    await ws_manager.broadcast(world.world_name or "agentverse", {
-                               ^^^^^^^^^^^^^^^^
-AttributeError: 'WorldEngine' object has no attribute 'world_name'
-INFO:     127.0.0.1:58854 - "WebSocket /world/agentverse/ws" [accepted]
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\uvicorn\protocols\websockets\websockets_sansio_impl.py", line 350, in run_asgi
+    result = await self.app(self.scope, self.receive, self.send)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\middleware\errors.py", line 151, in __call__
+    await self.app(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\middleware\base.py", line 103, in __call__
+    await self.app(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\middleware\base.py", line 103, in __call__
+    await self.app(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\middleware\cors.py", line 80, in __call__
+    await self.app(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\fastapi\routing.py", line 2685, in app
+    await route.handle(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\fastapi\routing.py", line 1766, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\fastapi\routing.py", line 2740, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\fastapi\routing.py", line 1788, in _handle_selected
+    await route.handle(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\routing.py", line 350, in handle
+    await self.app(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\fastapi\routing.py", line 177, in app
+    await wrap_app_handling_exceptions(app, session)(scope, receive, send)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\fastapi\routing.py", line 174, in app
+    await func(session)
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\fastapi\routing.py", line 781, in app
+    await dependant.call(**solved_result.values)
+  File "E:\ai_projects\Agent-Flow\agent_flow\agents\world\api.py", line 219, in world_websocket
+    data = await websocket.receive_text()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\ai_projects\Agent-Flow\.venv\Lib\site-packages\starlette\websockets.py", line 118, in receive_text
+    raise RuntimeError('WebSocket is not connected. Need to call "accept" first.')
+RuntimeError: WebSocket is not connected. Need to call "accept" first.
+INFO:     127.0.0.1:52915 - "WebSocket /world/agentverse/ws" [accepted]
 INFO:     connection open
-INFO:     127.0.0.1:58940 - "WebSocket /world/agentverse/ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:58941 - "WebSocket /world/agentverse/ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:59146 - "WebSocket /world/agentverse/ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:59147 - "WebSocket /world/agentverse/ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:59738 - "WebSocket /world/agentverse/ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:59739 - "WebSocket /world/agentverse/ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:63101 - "WebSocket /world/agentverse/ws" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:63102 - "WebSocket /world/agentverse/ws" [accepted]
+INFO:     127.0.0.1:52935 - "WebSocket /world/agentverse/ws" [accepted]
 INFO:     connection open

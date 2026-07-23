@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agent_flow.agents.world.engine import WorldEngine
+from agent_flow.agents.world.engine import InteractionDelta, WorldEngine
+
+if TYPE_CHECKING:
+    from agent_flow.agents.world.ticker import AutonomousTicker
 
 
 class WorldWebSocketManager:
@@ -40,9 +43,11 @@ class WorldWebSocketManager:
             self.unregister(world_name, ws)
 
 
-# World manager — يحتفظ بكل العوالم النشطة
+# World manager — يحتفظ بكل العوالم النشطة.
 world_manager: dict[str, WorldEngine] = {}
 ws_manager = WorldWebSocketManager()
+# Autonomous tickers, keyed by world name — one per world.
+tickers: dict[str, "AutonomousTicker"] = {}
 
 
 def get_or_create_world(name: str = "agentverse") -> WorldEngine:
@@ -52,20 +57,71 @@ def get_or_create_world(name: str = "agentverse") -> WorldEngine:
     return world_manager[name]
 
 
+def _pulse_payload(world: WorldEngine, tick: int) -> dict:
+    """Build the world_pulse WS frame payload (state + companies)."""
+    from agent_flow.agents.world.company_integration import company_store
+    state = world.get_state()
+    state["companies"] = [c.as_dict() for c in company_store.all()]
+    return {"type": "world_pulse", "tick": tick, "state": state}
+
+
+async def broadcast_delta(
+    world_name: str,
+    world: WorldEngine,
+    delta: InteractionDelta,
+    manager: "WorldWebSocketManager | None" = None,
+) -> None:
+    """Send one WS frame per interaction, plus a rollup world_pulse.
+
+    Order: moves → greetings → asks → answers → learnings → world_pulse.
+    If ``manager`` is None, uses the module-level ``ws_manager``.
+    """
+    mgr = manager if manager is not None else ws_manager
+    for i, m in enumerate(delta.moves):
+        await mgr.broadcast(world_name, {
+            "type": "agent_moved",
+            "id": f"mv_{delta.tick:05d}_{i}",
+            **m,
+            "tick": delta.tick,
+        })
+    for i, g in enumerate(delta.greetings):
+        await mgr.broadcast(world_name, {
+            "type": "agent_greeted",
+            "id": f"grt_{delta.tick:05d}_{i}",
+            **g,
+            "tick": delta.tick,
+        })
+    for i, a in enumerate(delta.asks):
+        await mgr.broadcast(world_name, {
+            "type": "agent_asked",
+            "id": f"ask_{delta.tick:05d}_{i}",
+            **a,
+            "tick": delta.tick,
+        })
+    for i, a in enumerate(delta.answers):
+        await mgr.broadcast(world_name, {
+            "type": "agent_answered",
+            "id": f"ans_{delta.tick:05d}_{i}",
+            **a,
+            "tick": delta.tick,
+        })
+    for i, L in enumerate(delta.learnings):
+        await mgr.broadcast(world_name, {
+            "type": "agent_learned",
+            "id": f"lrn_{delta.tick:05d}_{i}",
+            **L,
+            "tick": delta.tick,
+        })
+    await mgr.broadcast(world_name, _pulse_payload(world, delta.tick))
+
+
 async def run_world_ticks(world_name: str, ticks: int = 20, interval: float = 2.0):
     """تشغيل نبضات العالم مع بث التحديثات للواجهة."""
     world = world_manager.get(world_name)
     if not world:
         return
 
-    from agent_flow.agents.world.company_integration import company_store
-
     for _ in range(ticks):
-        await world.tick()
-        state = world.get_state()
-        state["companies"] = [c.as_dict() for c in company_store.all()]
-        await ws_manager.broadcast(world_name, {
-            "type": "world_tick",
-            "data": state,
-        })
+        delta = await world.tick()
+        await broadcast_delta(world_name, world, delta)
         await asyncio.sleep(interval)

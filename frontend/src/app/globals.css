@@ -24,3 +24,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes lv-slide-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.lv-slide-in { animation: lv-slide-in 300ms ease-out; }
+
+@keyframes lv-flash {
+  0%   { background-color: rgba(250, 204, 21, 0.35); }
+  100% { background-color: transparent; }
+}
+.lv-flash { animation: lv-flash 400ms ease-out; }

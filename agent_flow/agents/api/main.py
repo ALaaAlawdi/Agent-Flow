@@ -1607,8 +1607,22 @@ async def demo_ui():
     """Serve the demo HTML page."""
     from fastapi.responses import HTMLResponse
     from pathlib import Path
-    
+
     demo_path = Path(__file__).parent.parent.parent.parent / "demo.html"
     if demo_path.exists():
         return HTMLResponse(content=demo_path.read_text(encoding="utf-8"))
     return HTMLResponse(content="<h1>Demo file not found</h1>", status_code=404)
+
+
+# ============== SHUTDOWN HANDLER ==============
+
+@app.on_event("shutdown")
+async def _stop_all_tickers() -> None:
+    """Cleanly stop every AutonomousTicker so Uvicorn shuts down without warnings."""
+    from agent_flow.agents.world.ws import tickers
+    for name, ticker in list(tickers.items()):
+        try:
+            await ticker.stop()
+        except Exception:
+            pass
+        tickers.pop(name, None)
