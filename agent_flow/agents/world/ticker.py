@@ -36,7 +36,7 @@ class AutonomousTicker:
         self._world_name = world_name
         self._world = world
         self._ws = ws_manager
-        self._pace = float(pace_seconds)
+        self._pace = _clamp_pace(pace_seconds)
         self._stop = asyncio.Event()
         self._task: Optional[asyncio.Task] = None
 

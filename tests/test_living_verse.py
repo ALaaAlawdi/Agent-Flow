@@ -62,6 +62,18 @@ class InteractionDeltaTests(unittest.TestCase):
         # (Beta hasn't necessarily reciprocated on tick 1 — depends on order —
         # but Alpha's memory of Beta is guaranteed to be recorded.)
 
+    def test_tick_does_not_double_greet_same_pair(self):
+        """When A and B are mutually within 20 units, only one greeting fires per pair."""
+        async def run():
+            world = WorldEngine(name="test", width=300, height=300)
+            _place_two_agents_close(world)
+            delta = await world.tick()
+            return delta
+
+        delta = asyncio.run(run())
+        # At most one greeting event should have been emitted for this pair.
+        self.assertLessEqual(len(delta.greetings), 1)
+
     def test_tick_records_moves(self):
         """When an agent is far from other agents, it moves toward the nearest location."""
         async def run():
@@ -173,9 +185,9 @@ class AutonomousTickerTests(unittest.TestCase):
         fake_mgr.broadcast = AsyncMock()
 
         async def run():
-            ticker = AutonomousTicker("tick-test", world, fake_mgr, pace_seconds=0.05)
+            ticker = AutonomousTicker("tick-test", world, fake_mgr, pace_seconds=1.0)
             await ticker.start()
-            await asyncio.sleep(0.2)   # let ~3-4 ticks happen
+            await asyncio.sleep(1.5)   # let at least one tick happen at 1s pace
             await ticker.stop()
             return ticker
 
@@ -220,10 +232,10 @@ class AutonomousTickerTests(unittest.TestCase):
         fake_mgr.broadcast = AsyncMock()
 
         async def run():
-            ticker = AutonomousTicker("crash-test", broken_world, fake_mgr, pace_seconds=0.01)
+            ticker = AutonomousTicker("crash-test", broken_world, fake_mgr, pace_seconds=1.0)
             await ticker.start()
-            # Wait long enough for 3 failures + a bit.
-            await asyncio.sleep(0.5)
+            # Wait long enough for 3 failures + backoff: 3 ticks + 2*pace backoffs ~= 5s; 6s is safe.
+            await asyncio.sleep(6.0)
             return ticker
 
         ticker = asyncio.run(run())
@@ -245,9 +257,9 @@ class AutonomousTickerTests(unittest.TestCase):
         fake_mgr.broadcast = AsyncMock()
 
         async def run():
-            ticker = AutonomousTicker("companies-test", world, fake_mgr, pace_seconds=0.05)
+            ticker = AutonomousTicker("companies-test", world, fake_mgr, pace_seconds=1.0)
             await ticker.start()
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(1.5)
             await ticker.stop()
             return fake_mgr
 

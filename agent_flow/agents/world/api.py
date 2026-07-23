@@ -234,11 +234,16 @@ async def world_websocket(websocket: WebSocket, world_name: str):
                 elif action == "move":
                     agent = world.agents.get(cmd.get("agent_id", ""))
                     if agent:
+                        pre_pos = {"x": agent.position.x, "y": agent.position.y}
                         agent.move_toward(Position(cmd["x"], cmd["y"]))
                         await ws_manager.broadcast(world_name, {
                             "type": "agent_moved",
-                            "agent_id": agent.agent_id,
-                            "position": agent.position.as_dict(),
+                            "id": f"mv_manual_{int(agent.position.x * 1000)}_{int(agent.position.y * 1000)}",
+                            "agent": agent.agent_id,
+                            "agent_name": agent.name,
+                            "from_pos": pre_pos,
+                            "to_pos": {"x": agent.position.x, "y": agent.position.y},
+                            "tick": world.tick_count,
                         })
 
                 elif action == "tick":

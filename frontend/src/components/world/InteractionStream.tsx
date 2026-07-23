@@ -29,7 +29,6 @@ const LEARN_ICON: Record<"skill" | "memory" | "knowledge", string> = {
 
 function renderRow(ev: InteractionEvent, agentColors: Record<string, string>) {
   const actor = ev.kind === "learned" ? ev.agent : ev.from;
-  const actorName = ev.kind === "learned" ? ev.agent_name : ev.from_name;
   const color = agentColors[actor] ?? "#8b5cf6";
   const icon = ev.kind === "learned" ? LEARN_ICON[ev.kind_of] : KIND_ICON[ev.kind];
 
@@ -74,7 +73,7 @@ export default function InteractionStream({ events, agentColors }: InteractionSt
     if (atBottomRef.current && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [events.length]);
+  }, [events[events.length - 1]?.id]);
 
   return (
     <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-2 h-full flex flex-col">

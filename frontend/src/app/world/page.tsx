@@ -64,6 +64,7 @@ export default function WorldPage() {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const flashTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const addLog = useCallback((msg: string) => {
     setLog((prev) => [...prev.slice(-49), `${new Date().toLocaleTimeString()} ${msg}`]);
@@ -83,14 +84,25 @@ export default function WorldPage() {
       for (const k of keys) merged[k] = true;
       return { ...prev, [agentId]: merged };
     });
-    setTimeout(() => {
+    // Cancel any pending clear for this agent so a fresh event resets the 400ms window.
+    const existing = flashTimersRef.current[agentId];
+    if (existing) clearTimeout(existing);
+    flashTimersRef.current[agentId] = setTimeout(() => {
       setRecentDeltas((prev) => {
         if (!prev[agentId]) return prev;
         const cleared = { ...prev };
         delete cleared[agentId];
         return cleared;
       });
+      delete flashTimersRef.current[agentId];
     }, DELTA_FLASH_MS);
+  }, []);
+
+  // Clean up all pending flash timers on unmount.
+  useEffect(() => {
+    return () => {
+      Object.values(flashTimersRef.current).forEach(clearTimeout);
+    };
   }, []);
 
   // Connect WebSocket

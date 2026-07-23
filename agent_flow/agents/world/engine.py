@@ -447,6 +447,10 @@ class WorldEngine:
                 for aid, a in self.agents.items()
             }
 
+            # Track which pairs have already greeted this tick so A→B and B→A
+            # don't both fire in the same pulse.
+            greeted_pairs: set[frozenset[str]] = set()
+
             # Each agent acts.
             for agent in list(self.agents.values()):
                 if agent.state == AgentState.SLEEPING:
@@ -467,6 +471,14 @@ class WorldEngine:
                     target = self.agents.get(target_id)
                     if not target:
                         continue
+
+                    # Skip if this pair already greeted this tick (prevents mirrored duplicates).
+                    pair = frozenset({agent.agent_id, target.agent_id})
+                    if pair in greeted_pairs:
+                        talked = True   # still mark talked so the agent doesn't fall to the move branch
+                        break
+
+                    greeted_pairs.add(pair)
 
                     # 1. Greet.
                     greeting = f"Hello {thing['name']}! I'm {agent.name}. Nice to meet you!"
