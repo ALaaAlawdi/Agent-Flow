@@ -108,18 +108,29 @@ export default function WorldPage() {
   // Connect WebSocket
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.hostname}:8000/world/agentverse/ws`;
-    const socket = new WebSocket(wsUrl);
+    const candidates = [
+      `${protocol}//${window.location.host}/api/world/agentverse/ws`,
+      `${protocol}//${window.location.hostname}:8000/world/agentverse/ws`,
+    ];
 
-    socket.onopen = () => {
-      addLog("🟢 Connected to AgentVerse");
-      wsRef.current = socket;
-    };
+    let closed = false;
+    let socket: WebSocket | null = null;
+    let candidateIndex = 0;
 
-    socket.onmessage = (event) => {
-      let data: Record<string, unknown>;
-      try { data = JSON.parse(event.data); } catch { return; }
-      const type = data.type as string;
+    const connect = () => {
+      const wsUrl = candidates[candidateIndex];
+      addLog(`🔌 Connecting to ${wsUrl}`);
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = () => {
+        addLog(`🟢 Connected to AgentVerse via ${candidateIndex === 0 ? "proxy" : "backend"}`);
+        wsRef.current = socket;
+      };
+
+      socket.onmessage = (event) => {
+        let data: Record<string, unknown>;
+        try { data = JSON.parse(event.data); } catch { return; }
+        const type = data.type as string;
 
       if (type === "world_state" || type === "world_tick") {
         const payload = (data.data ?? data) as WorldState;
@@ -182,10 +193,28 @@ export default function WorldPage() {
       }
     };
 
-    socket.onclose = () => addLog("🔴 Disconnected");
-    socket.onerror = () => addLog("❌ WebSocket error");
+      socket.onclose = () => {
+        if (closed) return;
+        if (candidateIndex === 0) {
+          addLog("🟡 Proxy WebSocket failed — retrying direct backend...");
+          candidateIndex = 1;
+          connect();
+          return;
+        }
+        addLog("🔴 Disconnected");
+      };
 
-    return () => socket.close();
+      socket.onerror = () => {
+        addLog(`❌ WebSocket error on ${candidateIndex === 0 ? "proxy" : "backend"}`);
+      };
+    };
+
+    connect();
+
+    return () => {
+      closed = true;
+      socket?.close();
+    };
   }, [addLog, appendInteraction, flashDelta]);
 
   // Canvas drawing (unchanged from the previous version, kept intact)
